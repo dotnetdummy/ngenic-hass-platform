@@ -21,13 +21,14 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the sensor platform."""
 
     ngenic = hass.data[DOMAIN][DATA_CLIENT]
 
     devices = []
-    
+
     for tmp_tune in await ngenic.async_tunes():
         # listing tunes contain less information than when querying a single tune
         tune = await ngenic.async_tune(tmp_tune.uuid())
@@ -68,6 +69,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     async_add_entities(devices)
 
+
 class NgenicTune(ClimateEntity):
     """Representation of an Ngenic Thermostat"""
 
@@ -76,7 +78,7 @@ class NgenicTune(ClimateEntity):
         self._hass = hass
         self._available = False
         self._ngenic = ngenic
-        self._name =  "Ngenic Tune %s" % (tune["name"])
+        self._name = "Ngenic Tune %s" % (tune["name"])
         self._tune = tune
         self._room = control_room
         self._node = control_node
@@ -136,7 +138,8 @@ class NgenicTune(ClimateEntity):
     def _setup_updater(self):
         """Setup a timer that will execute an update every update interval"""
         # async_track_time_interval returns a function that, when executed, will remove the timer
-        self._updater = async_track_time_interval(self._hass, self._async_update, timedelta(minutes=5))
+        self._updater = async_track_time_interval(
+            self._hass, self._async_update, timedelta(minutes=5))
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""

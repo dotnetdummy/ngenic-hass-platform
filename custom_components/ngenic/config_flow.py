@@ -18,6 +18,7 @@ from .errors import AlreadyConfigured, NoTunes
 
 _LOGGER = logging.getLogger(__name__)
 
+
 @callback
 def configured_instances(hass):
     """Return a set of configured Ngenic instances."""
@@ -25,9 +26,10 @@ def configured_instances(hass):
         entry.data[CONF_TOKEN] for entry in hass.config_entries.async_entries(DOMAIN)
     )
 
+
 @config_entries.HANDLERS.register(DOMAIN)
 class FlowHandler(config_entries.ConfigFlow):
-    
+
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_PUSH
 
@@ -37,7 +39,7 @@ class FlowHandler(config_entries.ConfigFlow):
 
     async def async_step_user(self, user_input=None):
         """Handle the start of the config flow."""
-        
+
         errors = {}
 
         if user_input is not None:
@@ -50,10 +52,10 @@ class FlowHandler(config_entries.ConfigFlow):
                 )
 
                 tune_name = None
-                
+
                 for tune in ngenic.tunes():
                     tune_name = tune["tuneName"]
-        
+
                 if tune_name is None:
                     raise NoTunes
 
@@ -66,11 +68,10 @@ class FlowHandler(config_entries.ConfigFlow):
 
             except AlreadyConfigured:
                 errors["base"] = "already_configured"
-            
+
             except NoTunes:
                 errors["base"] = "no_tune"
 
-        
         return self.async_show_form(
             step_id='user',
             data_schema=vol.Schema({
@@ -78,5 +79,3 @@ class FlowHandler(config_entries.ConfigFlow):
             }),
             errors=errors
         )
-
-        
