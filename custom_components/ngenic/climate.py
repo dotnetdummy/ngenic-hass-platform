@@ -1,28 +1,24 @@
-import logging
+"""Climate platform for Ngenic Tune."""
+
 from datetime import timedelta
+import logging
 
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.components.climate import ClimateEntity
-from homeassistant.components.climate.const import (
+from homeassistant.components.climate import (
+    ClimateEntity,
     ClimateEntityFeature,
-    HVACMode
+    HVACMode,
 )
-from homeassistant.const import (
-    UnitOfTemperature,
-    ATTR_TEMPERATURE
-)
+from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_track_time_interval
 
-from custom_components.ngenic.ngenicpy.models.measurement import MeasurementType
-
-from .const import (
-    DOMAIN,
-    DATA_CLIENT
-)
+from .const import DATA_CLIENT, DOMAIN
+from .ngenicpy.models.measurement import MeasurementType
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, _, async_add_entities):
     """Set up the sensor platform."""
 
     ngenic = hass.data[DOMAIN][DATA_CLIENT]
@@ -42,7 +38,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         else:
             for room in tune["rooms"]:
                 if room["activeControl"] is True:
-                    control_room_uuids.append(room['uuid'])
+                    control_room_uuids.extend(room["uuid"])
 
         for control_room_uuid in control_room_uuids:
             # get the room whose sensor data and target temperature should be used as inputs to the Tune control system
@@ -51,19 +47,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
             # get the room node
             control_node = await tune.async_node(control_room["nodeUuid"])
 
-            device = NgenicTune(
-                hass,
-                ngenic,
-                tune,
-                control_room,
-                control_node
-            )
+            device = NgenicTune(hass, ngenic, tune, control_room, control_node)
 
             # Initial update
-            await device._async_update()
+            await device.async_update()
 
             # Setup update timer
-            device._setup_updater()
+            device.setup_updater()
 
             devices.append(device)
 
@@ -71,14 +61,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class NgenicTune(ClimateEntity):
-    """Representation of an Ngenic Thermostat"""
+    """Representation of an Ngenic Thermostat."""
 
-    def __init__(self, hass, ngenic, tune, control_room, control_node):
+    def __init__(
+        self, hass: HomeAssistant, ngenic, tune, control_room, control_node
+    ) -> None:
         """Initialize the thermostat."""
         self._hass = hass
         self._available = False
         self._ngenic = ngenic
-        self._name = "Ngenic Tune %s" % (tune["name"])
+        self._name = f"Ngenic Tune {tune["name"]}"
         self._tune = tune
         self._room = control_room
         self._node = control_node
@@ -98,11 +90,13 @@ class NgenicTune(ClimateEntity):
 
     @property
     def available(self):
+        """Return if the Tune is available."""
         return self._available
 
     @property
     def unique_id(self):
-        return "%s-%s" % (self._node.uuid(), "climate")
+        """Return a unique ID for this Tune."""
+        return f"{self._node.uuid()}-climate"
 
     @property
     def temperature_unit(self):
@@ -121,12 +115,12 @@ class NgenicTune(ClimateEntity):
 
     @property
     def hvac_mode(self):
-        """Must be implemented"""
+        """Must be implemented."""
         return HVACMode.HEAT
 
     @property
     def hvac_modes(self):
-        """Must be implemented"""
+        """Must be implemented."""
         return [HVACMode.HEAT]
 
     async def async_will_remove_from_hass(self):
@@ -135,11 +129,12 @@ class NgenicTune(ClimateEntity):
             self._updater()
             self._updater = None
 
-    def _setup_updater(self):
-        """Setup a timer that will execute an update every update interval"""
+    def setup_updater(self):
+        """Configure a timer that will execute an update every update interval."""
         # async_track_time_interval returns a function that, when executed, will remove the timer
         self._updater = async_track_time_interval(
-            self._hass, self._async_update, timedelta(minutes=5))
+            self._hass, self.async_update, timedelta(minutes=5)
+        )
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -151,8 +146,9 @@ class NgenicTune(ClimateEntity):
         await self._room.async_update()
         self._target_temperature = temperature
 
-    async def _async_update(self, event_time=None):
+    async def async_update(self, event_time=None):
         """Fetch new state data from the sensor.
+
         This is the only method that should fetch new data for Home Assistant.
         """
         try:
@@ -162,7 +158,9 @@ class NgenicTune(ClimateEntity):
         except Exception:
             # Don't throw an exception if a sensor fails to update.
             # Instead, make the sensor unavailable.
-            _LOGGER.exception("Failed to update climate '%s'" % self.unique_id)
+            _LOGGER.exception(
+                "Failed to update climate '%(unique_id)s'", self.unique_id
+            )
             self._available = False
             return
 

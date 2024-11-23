@@ -1,37 +1,33 @@
-import logging
+"""Sensor platform for Ngenic integration."""
+
 from datetime import datetime, timedelta
+import logging
 
-
-from homeassistant.const import (
-    UnitOfTemperature,
-    UnitOfEnergy,
-    UnitOfPower
-)
 from homeassistant.components.sensor import (
-    SensorStateClass,
-    SensorEntity,
     SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
 )
+from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfTemperature
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
 import homeassistant.util.dt as dt_util
 
-from custom_components.ngenic.ngenicpy.models.measurement import MeasurementType
-from custom_components.ngenic.ngenicpy.models.node import Node, NodeType
-from custom_components.ngenic.ngenicpy.models.node_status import NodeStatus
-
-from .const import (
-    DOMAIN,
-    DATA_CLIENT
-)
+from .const import DATA_CLIENT, DOMAIN
+from .ngenicpy.models.measurement import MeasurementType
+from .ngenicpy.models.node import Node, NodeType
+from .ngenicpy.models.node_status import NodeStatus
 
 _LOGGER = logging.getLogger(__name__)
 
-TIME_ZONE = "Z" if str(dt_util.DEFAULT_TIME_ZONE) == "UTC" else str(
-    dt_util.DEFAULT_TIME_ZONE)
+TIME_ZONE = (
+    "Z" if str(dt_util.DEFAULT_TIME_ZONE) == "UTC" else str(dt_util.DEFAULT_TIME_ZONE)
+)
 
 
 def get_from_to_datetime_month():
     """Get a period for this month.
+
     This will return two dates in ISO 8601:2004 format
     The first date will be at 00:00 in the first of this month, and the second
     date will be at 00:00 in the first day in the following month, as we are measuring historic
@@ -46,12 +42,12 @@ def get_from_to_datetime_month():
     """
     from_dt = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     to_dt = (from_dt + timedelta(days=31)).replace(day=1)
-    return (from_dt.isoformat() + " " + TIME_ZONE,
-            to_dt.isoformat() + " " + TIME_ZONE)
+    return (from_dt.isoformat() + " " + TIME_ZONE, to_dt.isoformat() + " " + TIME_ZONE)
 
 
 def get_from_to_datetime_last_month():
     """Get a period for last month.
+
     This will return two dates in ISO 8601:2004 format
     The first date will be at 00:00 in the first of last month, and the second
     date will be at 00:00 in the first day in this month.
@@ -64,12 +60,12 @@ def get_from_to_datetime_last_month():
     """
     to_dt = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     from_dt = (to_dt + timedelta(days=-1)).replace(day=1)
-    return (from_dt.isoformat() + " " + TIME_ZONE,
-            to_dt.isoformat() + " " + TIME_ZONE)
+    return (from_dt.isoformat() + " " + TIME_ZONE, to_dt.isoformat() + " " + TIME_ZONE)
 
 
 def get_from_to_datetime(days=1):
-    """Get a period
+    """Get a period.
+
     This will return two dates in ISO 8601:2004 format
     The first date will be at 00:00 today, and the second
     date will be at 00:00 n days ahead of now.
@@ -83,38 +79,36 @@ def get_from_to_datetime(days=1):
     from_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     to_dt = from_dt + timedelta(days=days)
 
-    return (from_dt.isoformat() + " " + TIME_ZONE,
-            to_dt.isoformat() + " " + TIME_ZONE)
+    return (from_dt.isoformat() + " " + TIME_ZONE, to_dt.isoformat() + " " + TIME_ZONE)
 
 
 async def get_measurement_value(node, **kwargs):
-    """Get measurement
+    """Get measurement.
+
     This is a wrapper around the measurement API to gather
     parsing and error handling in a single place.
     """
     measurement = await node.async_measurement(**kwargs)
     if not measurement:
         # measurement API will return None if no measurements were found for the period
-        _LOGGER.info("Measurement not found for period, this is expected when data have not been gathered for the period (type=%s, from=%s, to=%s)" %
-                     (
-                         kwargs.get("measurement_type", "unknown"),
-                         kwargs.get("from_dt", "None"),
-                         kwargs.get("to_dt", "None")
-                     )
-                     )
+        _LOGGER.info(
+            "Measurement not found for period, this is expected when data have not been gathered for the period (type=%(measurement_type)s, from=%(from_dt)s, to=%(to_dt)s)",
+            kwargs.get("measurement_type", "unknown"),
+            kwargs.get("from_dt", "None"),
+            kwargs.get("to_dt", "None"),
+        )
         measurement_val = 0
+    elif isinstance(measurement, list):
+        # using datetime will return a list of measurements
+        # we'll use the last item in that list
+        measurement_val = measurement[-1]["value"]
     else:
-        if isinstance(measurement, list):
-            # using datetime will return a list of measurements
-            # we'll use the last item in that list
-            measurement_val = measurement[-1]["value"]
-        else:
-            measurement_val = measurement["value"]
+        measurement_val = measurement["value"]
 
     return measurement_val
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, _, async_add_entities):
     """Set up the sensor platform."""
     ngenic = hass.data[DOMAIN][DATA_CLIENT]
 
@@ -124,14 +118,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         rooms = await tune.async_rooms()
 
         for node in await tune.async_nodes():
-            node_name = "Ngenic %s" % node.get_type().name.lower()
+            node_name = f"Ngenic {node.get_type().name.lower()}"
 
             if node.get_type() == NodeType.SENSOR:
                 # If this sensor is connected to a room
                 # we'll use the room name as the sensor name
                 for room in rooms:
                     if room["nodeUuid"] == node.uuid():
-                        node_name = "%s %s" % (node_name, room["name"])
+                        node_name = f"{node_name} {room["name"]}"
 
             measurement_types = await node.async_measurement_types()
             if MeasurementType.TEMPERATURE in measurement_types:
@@ -142,34 +136,24 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         node,
                         node_name,
                         timedelta(minutes=5),
-                        MeasurementType.TEMPERATURE
+                        MeasurementType.TEMPERATURE,
                     )
                 )
                 devices.append(
                     NgenicBatterySensor(
-                        hass,
-                        ngenic,
-                        node,
-                        node_name,
-                        timedelta(minutes=5),
-                        "BATTERY"
+                        hass, ngenic, node, node_name, timedelta(minutes=5), "BATTERY"
                     )
                 )
                 devices.append(
                     NgenicSignalSensor(
-                        hass,
-                        ngenic,
-                        node,
-                        node_name,
-                        timedelta(minutes=5),
-                        "SIGNAL"
+                        hass, ngenic, node, node_name, timedelta(minutes=5), "SIGNAL"
                     )
                 )
 
             if MeasurementType.CONTROL_VALUE in measurement_types:
                 # append "control" so it doesn't collide with control temperature
                 # this will become "Ngenic controller control temperature"
-                node_name = "%s %s" % (node_name, "control")
+                node_name = f"{node_name} control"
                 devices.append(
                     NgenicTempSensor(
                         hass,
@@ -177,7 +161,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         node,
                         node_name,
                         timedelta(minutes=5),
-                        MeasurementType.CONTROL_VALUE
+                        MeasurementType.CONTROL_VALUE,
                     )
                 )
 
@@ -189,7 +173,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         node,
                         node_name,
                         timedelta(minutes=5),
-                        MeasurementType.HUMIDITY
+                        MeasurementType.HUMIDITY,
                     )
                 )
 
@@ -201,7 +185,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         node,
                         node_name,
                         timedelta(minutes=1),
-                        MeasurementType.POWER_KW
+                        MeasurementType.POWER_KW,
                     )
                 )
 
@@ -213,7 +197,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         node,
                         node_name,
                         timedelta(minutes=10),
-                        MeasurementType.ENERGY_KWH
+                        MeasurementType.ENERGY_KWH,
                     )
                 )
                 devices.append(
@@ -223,7 +207,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         node,
                         node_name,
                         timedelta(minutes=20),
-                        MeasurementType.ENERGY_KWH
+                        MeasurementType.ENERGY_KWH,
                     )
                 )
                 devices.append(
@@ -233,25 +217,29 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         node,
                         node_name,
                         timedelta(minutes=60),
-                        MeasurementType.ENERGY_KWH
+                        MeasurementType.ENERGY_KWH,
                     )
                 )
 
     for device in devices:
         # Initial update (will not update hass state)
-        await device._async_update()
+        await device.async_update()
 
         # Setup update timer
-        device._setup_updater()
+        device.setup_updater()
 
     # Add entities to hass (and trigger a state update)
     async_add_entities(devices, update_before_add=True)
 
 
 class NgenicSensor(SensorEntity):
-    """Representation of an Ngenic Sensor"""
+    """Representation of an Ngenic Sensor."""
 
-    def __init__(self, hass, ngenic, node, name, update_interval, measurement_type):
+    def __init__(
+        self, hass: HomeAssistant, ngenic, node, name, update_interval, measurement_type
+    ) -> None:
+        """Initialize the sensor."""
+
         self._hass = hass
         self._state = None
         self._available = False
@@ -265,10 +253,11 @@ class NgenicSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return "%s %s" % (self._name, self.device_class)
+        return f"{self._name} {self.device_class}"
 
     @property
     def available(self):
+        """Return if the sensor is available."""
         return self._available
 
     @property
@@ -278,11 +267,17 @@ class NgenicSensor(SensorEntity):
 
     @property
     def unique_id(self):
-        return "%s-%s-%s" % (self._node.uuid(), self._measurement_type.name if isinstance(self._measurement_type, MeasurementType) else self._measurement_type, "sensor")
+        """Return a unique ID for the sensor."""
+        part = (
+            self._measurement_type.name
+            if isinstance(self._measurement_type, MeasurementType)
+            else self._measurement_type
+        )
+        return f"{self._node.uuid()}-{part}-sensor"
 
     @property
     def should_poll(self):
-        """An update is pushed when device is updated"""
+        """An update is pushed when device is updated."""
         return False
 
     async def async_will_remove_from_hass(self):
@@ -291,41 +286,53 @@ class NgenicSensor(SensorEntity):
             self._updater()
             self._updater = None
 
-    def _setup_updater(self):
-        """Setup a timer that will execute an update every update interval"""
+    def setup_updater(self):
+        """Configure a timer that will execute an update every update interval."""
         # async_track_time_interval returns a function that, when executed, will remove the timer
         self._updater = async_track_time_interval(
-            self._hass, self._async_update, self._update_interval)
+            self._hass, self.async_update, self._update_interval
+        )
 
     async def _async_fetch_measurement(self):
         """Fetch the measurement data from ngenic API.
+
         Return measurement formatted as intended to be displayed in hass.
         Concrete classes should override this function if they
         fetch or format the measurement differently.
         """
-        current = await get_measurement_value(self._node, measurement_type=self._measurement_type)
+        current = await get_measurement_value(
+            self._node, measurement_type=self._measurement_type
+        )
         return round(current, 1)
 
-    async def _async_update(self, event_time=None):
+    async def async_update(self, event_time=None):
         """Fetch new state data for the sensor.
+
         This is the only method that should fetch new data for Home Assistant.
         """
-        _LOGGER.debug("Fetch measurement (name=%s, type=%s)" %
-                      (self._name, self._measurement_type))
+        _LOGGER.debug(
+            "Fetch measurement (name=%(name)s, type=%(measurement_type)s)",
+            self._name,
+            self._measurement_type,
+        )
         try:
             new_state = await self._async_fetch_measurement()
             self._available = True
         except Exception:
             # Don't throw an exception if a sensor fails to update.
             # Instead, make the sensor unavailable.
-            _LOGGER.exception("Failed to update sensor '%s'" % self.unique_id)
+            _LOGGER.exception("Failed to update sensor '%(unique_id)s'", self.unique_id)
             self._available = False
             return
 
         if self._state != new_state:
             self._state = new_state
-            _LOGGER.debug("New measurement: %f (name=%s, type=%s)" %
-                          (new_state, self._name, self._measurement_type))
+            _LOGGER.debug(
+                "New measurement: %(state)f (name=%(name)s, type=%(measurement_type)s)",
+                new_state,
+                self._name,
+                self._measurement_type,
+            )
 
             # self.hass is loaded once the entity have been setup.
             # Since this method is executed before adding the entity
@@ -334,11 +341,17 @@ class NgenicSensor(SensorEntity):
                 # Tell hass that an update is available
                 self.schedule_update_ha_state()
         else:
-            _LOGGER.debug("No new measurement (old=%f, name=%s, type=%s)" % (
-                new_state, self._name, self._measurement_type))
+            _LOGGER.debug(
+                "No new measurement: %(state)f (name=%(name)s, type=%(measurement_type)s)",
+                self._state,
+                self._name,
+                self._measurement_type,
+            )
 
 
 class NgenicTempSensor(NgenicSensor):
+    """Representation of an Ngenic Temperature Sensor."""
+
     device_class = SensorDeviceClass.TEMPERATURE
     state_class = SensorStateClass.MEASUREMENT
 
@@ -349,6 +362,8 @@ class NgenicTempSensor(NgenicSensor):
 
 
 class NgenicHumiditySensor(NgenicSensor):
+    """Representation of an Ngenic Humidity Sensor."""
+
     device_class = SensorDeviceClass.HUMIDITY
     state_class = SensorStateClass.MEASUREMENT
 
@@ -359,6 +374,8 @@ class NgenicHumiditySensor(NgenicSensor):
 
 
 class NgenicBatterySensor(NgenicSensor):
+    """Representation of an Ngenic Battery Sensor."""
+
     device_class = SensorDeviceClass.BATTERY
     state_class = SensorStateClass.MEASUREMENT
 
@@ -381,6 +398,8 @@ class NgenicBatterySensor(NgenicSensor):
 
 
 class NgenicSignalSensor(NgenicSensor):
+    """Representation of an Ngenic Signal Sensor."""
+
     device_class = SensorDeviceClass.SIGNAL_STRENGTH
     state_class = SensorStateClass.MEASUREMENT
 
@@ -403,6 +422,8 @@ class NgenicSignalSensor(NgenicSensor):
 
 
 class NgenicPowerSensor(NgenicSensor):
+    """Representation of an Ngenic Power Sensor."""
+
     device_class = SensorDeviceClass.POWER
     state_class = SensorStateClass.MEASUREMENT
 
@@ -413,13 +434,18 @@ class NgenicPowerSensor(NgenicSensor):
 
     async def _async_fetch_measurement(self):
         """Fetch new power state data for the sensor.
+
         The NGenic API returns a float with kW but HA huses W so we need to multiply by 1000
         """
-        current = await get_measurement_value(self._node, measurement_type=self._measurement_type)
-        return round(current*1000.0, 1)
+        current = await get_measurement_value(
+            self._node, measurement_type=self._measurement_type
+        )
+        return round(current * 1000.0, 1)
 
 
 class NgenicEnergySensor(NgenicSensor):
+    """Representation of an Ngenic Energy Sensor."""
+
     device_class = SensorDeviceClass.ENERGY
     state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -430,21 +456,29 @@ class NgenicEnergySensor(NgenicSensor):
 
     async def _async_fetch_measurement(self):
         """Ask for measurements for a duration.
+
         This requires some further inputs, so we'll override the _async_fetch_measurement method.
         """
         from_dt, to_dt = get_from_to_datetime()
         # using datetime will return a list of measurements
         # we'll use the last item in that list
-        current = await get_measurement_value(self._node, measurement_type=self._measurement_type, from_dt=from_dt, to_dt=to_dt)
+        current = await get_measurement_value(
+            self._node,
+            measurement_type=self._measurement_type,
+            from_dt=from_dt,
+            to_dt=to_dt,
+        )
         return round(current, 1)
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return "%s %s" % (self._name, "energy")
+        return f"{self._name} energy"
 
 
 class NgenicEnergySensorMonth(NgenicSensor):
+    """Representation of an Ngenic Energy Sensor (monthly)."""
+
     device_class = SensorDeviceClass.ENERGY
 
     @property
@@ -454,26 +488,35 @@ class NgenicEnergySensorMonth(NgenicSensor):
 
     async def _async_fetch_measurement(self):
         """Ask for measurements for a duration.
+
         This requires some further inputs, so we'll override the _async_fetch_measurement method.
         """
         from_dt, to_dt = get_from_to_datetime_month()
         # using datetime will return a list of measurements
         # we'll use the last item in that list
         # dont send any period so the response includes the whole timespan
-        current = await get_measurement_value(self._node, measurement_type=self._measurement_type, from_dt=from_dt, to_dt=to_dt)
+        current = await get_measurement_value(
+            self._node,
+            measurement_type=self._measurement_type,
+            from_dt=from_dt,
+            to_dt=to_dt,
+        )
         return round(current, 1)
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return "%s %s" % (self._name, "monthly energy")
+        return f"{self._name} monthly energy"
 
     @property
     def unique_id(self):
-        return "%s-%s-%s-month" % (self._node.uuid(), self._measurement_type.name, "sensor")
+        """Return a unique ID for the sensor."""
+        return f"{self._node.uuid()}-{self._measurement_type.name}-sensor-month"
 
 
 class NgenicEnergySensorLastMonth(NgenicSensor):
+    """Representation of an Ngenic Energy Sensor (last month)."""
+
     device_class = SensorDeviceClass.ENERGY
 
     @property
@@ -483,17 +526,24 @@ class NgenicEnergySensorLastMonth(NgenicSensor):
 
     async def _async_fetch_measurement(self):
         """Ask for measurements for a duration.
+
         This requires some further inputs, so we'll override the _async_fetch_measurement method.
         """
         from_dt, to_dt = get_from_to_datetime_last_month()
-        current = await get_measurement_value(self._node, measurement_type=self._measurement_type, from_dt=from_dt, to_dt=to_dt)
+        current = await get_measurement_value(
+            self._node,
+            measurement_type=self._measurement_type,
+            from_dt=from_dt,
+            to_dt=to_dt,
+        )
         return round(current, 1)
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return "%s %s" % (self._name, "last month energy")
+        return f"{self._name} last month energy"
 
     @property
     def unique_id(self):
-        return "%s-%s-%s-last-month" % (self._node.uuid(), self._measurement_type.name, "sensor")
+        """Return a unique ID for the sensor."""
+        return f"{self._node.uuid()}-{self._measurement_type.name}-sensor-last-month"

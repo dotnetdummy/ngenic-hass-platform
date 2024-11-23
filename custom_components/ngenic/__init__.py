@@ -1,23 +1,17 @@
-"""Support for Ngenic Tune"""
+"""Support for Ngenic Tune."""
+
 import logging
 
 import voluptuous as vol
 
 from homeassistant.config_entries import SOURCE_IMPORT
+from homeassistant.const import CONF_TOKEN, Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
-from homeassistant.const import (
-    CONF_TOKEN,
-    Platform
-)
-
-from custom_components.ngenic.ngenicpy import AsyncNgenic
 
 from .config_flow import configured_instances
-from .const import (
-    DOMAIN,
-    DATA_CLIENT,
-    DATA_CONFIG
-)
+from .const import DATA_CLIENT, DATA_CONFIG, DOMAIN
+from .ngenicpy import AsyncNgenic
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,14 +26,11 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-NGENIC_PLATFORMS = [
-    Platform.CLIMATE,
-    Platform.SENSOR
-]
+NGENIC_PLATFORMS = [Platform.CLIMATE, Platform.SENSOR]
 
 
-async def async_setup(hass, config):
-    """Setup the Ngenic component"""
+async def async_setup(hass: HomeAssistant, config: dict):
+    """Init and configuration of the Ngenic component."""
     hass.data[DOMAIN] = {}
     hass.data[DOMAIN][DATA_CLIENT] = {}
 
@@ -60,31 +51,29 @@ async def async_setup(hass, config):
         hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_IMPORT},
-            data={
-                CONF_TOKEN: conf[CONF_TOKEN]
-            },
+            data={CONF_TOKEN: conf[CONF_TOKEN]},
         )
     )
 
     return True
 
 
-async def async_setup_entry(hass, config_entry):
-    ngenic = AsyncNgenic(
-        token=config_entry.data[CONF_TOKEN]
-    )
+async def async_setup_entry(hass: HomeAssistant, config_entry):
+    """Init and configuration of the Ngenic component."""
+    ngenic = AsyncNgenic(token=config_entry.data[CONF_TOKEN])
 
     hass.data[DOMAIN][DATA_CLIENT] = ngenic
 
     config_entry.async_create_task(
-        hass, hass.config_entries.async_forward_entry_setups(
-            config_entry, NGENIC_PLATFORMS)
+        hass,
+        hass.config_entries.async_forward_entry_setups(config_entry, NGENIC_PLATFORMS),
     )
 
     return True
 
 
-async def async_unload_entry(hass, config_entry):
+async def async_unload_entry(hass: HomeAssistant, config_entry):
+    """Unload of the Ngenic component."""
     await hass.config_entries.async_unload_platforms(config_entry, NGENIC_PLATFORMS)
 
     await hass.data[DOMAIN][DATA_CLIENT].async_close()

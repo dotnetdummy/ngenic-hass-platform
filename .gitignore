@@ -103,3 +103,18 @@ venv.bak/
 # mypy
 .mypy_cache/
 .DS_Store
+
+# HA specifics
+.cloud/
+.storage/
+blueprints/
+deps/
+tts/
+.HA_VERSION
+automations.yaml
+configuration.yaml
+home-assistant_v2.db**
+home-assistant.log**
+scenes.yaml
+scripts.yaml
+secrets.yaml
