@@ -1,9 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 
-from ngenicpy import Ngenic
-from ngenicpy.models.node import NodeType
-from ngenicpy.models.measurement import MeasurementType
 
 from homeassistant.const import (
     UnitOfTemperature,
@@ -17,6 +14,10 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.helpers.event import async_track_time_interval
 import homeassistant.util.dt as dt_util
+
+from custom_components.ngenic.ngenicpy.models.measurement import MeasurementType
+from custom_components.ngenic.ngenicpy.models.node import Node, NodeType
+from custom_components.ngenic.ngenicpy.models.node_status import NodeStatus
 
 from .const import (
     DOMAIN,

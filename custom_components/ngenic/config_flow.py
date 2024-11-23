@@ -10,11 +10,11 @@ from homeassistant.const import (
     CONF_TOKEN
 )
 
+from custom_components.ngenic.ngenicpy import Ngenic
+from custom_components.ngenic.ngenicpy.exceptions import ClientException
+
 from .const import DOMAIN
 from .errors import AlreadyConfigured, NoTunes
-
-from ngenicpy import Ngenic
-from ngenicpy.exceptions import ClientException
 
 _LOGGER = logging.getLogger(__name__)
 

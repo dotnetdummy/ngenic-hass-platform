@@ -10,6 +10,8 @@ from homeassistant.const import (
     Platform
 )
 
+from custom_components.ngenic.ngenicpy import AsyncNgenic
+
 from .config_flow import configured_instances
 from .const import (
     DOMAIN,
@@ -68,15 +70,15 @@ async def async_setup(hass, config):
 
 
 async def async_setup_entry(hass, config_entry):
-    from ngenicpy import AsyncNgenic
     ngenic = AsyncNgenic(
         token=config_entry.data[CONF_TOKEN]
     )
 
     hass.data[DOMAIN][DATA_CLIENT] = ngenic
-    
+
     config_entry.async_create_task(
-        hass, hass.config_entries.async_forward_entry_setups(config_entry, NGENIC_PLATFORMS)
+        hass, hass.config_entries.async_forward_entry_setups(
+            config_entry, NGENIC_PLATFORMS)
     )
 
     return True
