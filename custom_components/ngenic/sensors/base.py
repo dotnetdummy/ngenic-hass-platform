@@ -11,6 +11,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from ..ngenicpy import AsyncNgenic  # noqa: TID252
 from ..ngenicpy.models.measurement import MeasurementType  # noqa: TID252
 from ..ngenicpy.models.node import Node  # noqa: TID252
+from ..ngenicpy.models.room import Room  # noqa: TID252
 from . import get_measurement_value
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class NgenicSensor(SensorEntity):
         self,
         hass: HomeAssistant,
         ngenic: AsyncNgenic,
+        room: Room | None,
         node: Node,
         name: str,
         update_interval: timedelta,
@@ -40,6 +42,9 @@ class NgenicSensor(SensorEntity):
         self._update_interval = update_interval
         self._measurement_type = measurement_type
         self._updater = None
+        self._attributes = {}
+        if room is not None:
+            self._attributes["room_uuid"] = room.uuid()
         self._attr_device_info = device_info
 
     @property
@@ -71,6 +76,11 @@ class NgenicSensor(SensorEntity):
     def should_poll(self) -> bool:
         """An update is pushed when device is updated."""
         return False
+
+    @property
+    def extra_state_attributes(self):
+        """Return entity specific state attributes."""
+        return self._attributes
 
     async def async_will_remove_from_hass(self) -> None:
         """Remove updater when sensor is removed."""

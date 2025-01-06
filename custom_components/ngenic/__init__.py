@@ -8,8 +8,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
 from .config_flow import configured_instances
-from .const import DATA_CLIENT, DATA_CONFIG, DOMAIN
+from .const import DATA_CLIENT, DATA_CONFIG, DOMAIN, SERVICE_SET_ACTIVE_CONTROL
 from .ngenicpy import AsyncNgenic
+from .services import async_register_services
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -58,6 +59,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """Init and configuration of the Ngenic component."""
 
     hass.data[DOMAIN][DATA_CLIENT] = AsyncNgenic(token=config_entry.data[CONF_TOKEN])
+
+    # Register Ngenic services
+    async_register_services(hass)
+
     await hass.config_entries.async_forward_entry_setups(config_entry, NGENIC_PLATFORMS)
 
     return True
@@ -68,5 +73,8 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 
     await hass.config_entries.async_unload_platforms(config_entry, NGENIC_PLATFORMS)
     await hass.data[DOMAIN][DATA_CLIENT].async_close()
+
+    # Remove Ngenic services
+    hass.services.async_remove(DOMAIN, SERVICE_SET_ACTIVE_CONTROL)
 
     return True

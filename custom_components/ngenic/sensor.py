@@ -10,6 +10,7 @@ from .const import BRAND, DATA_CLIENT, DOMAIN
 from .ngenicpy import AsyncNgenic
 from .ngenicpy.models.measurement import MeasurementType
 from .ngenicpy.models.node import NodeType
+from .ngenicpy.models.room import Room
 from .sensors.battery import NgenicBatterySensor
 from .sensors.energy import NgenicEnergySensor
 from .sensors.energy_last_month import NgenicEnergyLastMonthSensor
@@ -33,6 +34,7 @@ async def async_setup_entry(
 
         for node in await tune.async_nodes():
             node_name = f"Ngenic {node.get_type().name.lower()}"
+            node_room: Room = None
 
             if node.get_type() == NodeType.SENSOR:
                 # If this sensor is connected to a room
@@ -40,6 +42,8 @@ async def async_setup_entry(
                 for room in rooms:
                     if room["nodeUuid"] == node.uuid():
                         node_name = f"{node_name} {room["name"]}"
+                        node_room = room
+                        break
 
             device_info = DeviceInfo(
                 identifiers={(DOMAIN, node.uuid())},
@@ -53,6 +57,7 @@ async def async_setup_entry(
                     NgenicTemperatureSensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=5),
@@ -64,6 +69,7 @@ async def async_setup_entry(
                     NgenicBatterySensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=5),
@@ -75,6 +81,7 @@ async def async_setup_entry(
                     NgenicSignalStrengthSensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=5),
@@ -91,6 +98,7 @@ async def async_setup_entry(
                     NgenicTemperatureSensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=5),
@@ -104,6 +112,7 @@ async def async_setup_entry(
                     NgenicHumiditySensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=5),
@@ -117,6 +126,7 @@ async def async_setup_entry(
                     NgenicPowerSensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=1),
@@ -130,6 +140,7 @@ async def async_setup_entry(
                     NgenicEnergySensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=10),
@@ -141,6 +152,7 @@ async def async_setup_entry(
                     NgenicEnergyThisMonthSensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=20),
@@ -152,6 +164,7 @@ async def async_setup_entry(
                     NgenicEnergyLastMonthSensor(
                         hass,
                         ngenic,
+                        node_room,
                         node,
                         node_name,
                         timedelta(minutes=60),

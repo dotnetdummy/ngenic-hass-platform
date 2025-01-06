@@ -7,6 +7,8 @@ DOMAIN: Final[str] = "ngenic"
 BRAND: Final[str] = "Ngenic"
 DATA_CLIENT: Final[str] = "data_client"
 DATA_CONFIG: Final[str] = "config"
+SERVICE_SET_ACTIVE_CONTROL: Final[str] = "set_active_control"
+
 
 """
 How often to re-scan sensor information.
