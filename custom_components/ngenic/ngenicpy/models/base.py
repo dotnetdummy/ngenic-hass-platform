@@ -4,13 +4,17 @@ import json
 import logging
 from typing import Any
 
-from aiocache import cached
 import httpx
 
 from ..const import API_URL  # noqa: TID252
 from ..exceptions import ApiException, ClientException  # noqa: TID252
 
 LOG = logging.getLogger(__package__)
+
+try:
+    from time import monotonic
+except ImportError:
+    from time import time as monotonic
 
 
 class NgenicBase:
@@ -32,6 +36,9 @@ class NgenicBase:
 
         # backing json of the model
         self._json = json_data
+
+        # poor-man's cache for get requests
+        self._cache = {}
 
     def json(self) -> dict[str, Any]:
         """Get a json representaiton of the model.
@@ -235,9 +242,23 @@ class NgenicBase:
     def _async_delete(self, url: str):
         return self._async_request("delete", f"{API_URL}/{url}", False)
 
-    @cached(ttl=5)
-    async def _async_get(self, url: str, **kwargs):
-        return await self._async_request("get", f"{API_URL}/{url}", False, **kwargs)
+    async def _async_get(self, url: str):
+        url = f"{API_URL}/{url}"
+        now = monotonic()
+        cache_key = hash(url)
+
+        if cache_key in self._cache:
+            expiration, result = self._cache[cache_key]
+            if expiration > now:
+                LOG.debug("Cache hit for %s", url)
+                return result
+
+        result = await self._async_request("get", url, False)
+
+        expiration = now + 5.0
+        self._cache[cache_key] = expiration, result
+
+        return result
 
     def _async_post(self, url: str, data: Any = None, is_json: bool = True, **kwargs):
         data, headers = self._prehandle_write(data, is_json, kwargs)
