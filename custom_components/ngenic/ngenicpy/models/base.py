@@ -9,7 +9,7 @@ import httpx
 from ..const import API_URL  # noqa: TID252
 from ..exceptions import ApiException, ClientException  # noqa: TID252
 
-LOG = logging.getLogger(__package__)
+_LOGGER = logging.getLogger(__package__)
 
 try:
     from time import monotonic
@@ -41,7 +41,7 @@ class NgenicBase:
         self._cache = {}
 
     def json(self) -> dict[str, Any]:
-        """Get a json representaiton of the model.
+        """Get a json representation of the model.
 
         :return:
 
@@ -167,7 +167,7 @@ class NgenicBase:
             response
         """
 
-        LOG.debug("%s %s with %s %s", method.upper(), url, args, kwargs)
+        _LOGGER.debug("%s %s with %s %s", method.upper(), url, args, kwargs)
 
         res: httpx.Response | None = None
         try:
@@ -188,8 +188,8 @@ class NgenicBase:
                     self._get_error("A request exception occurred", res, parent_ex=exc)
                 ) from exc
             # retry request
-            LOG.debug(
-                "Got a CloseError while trying to send request. Retry request once."
+            _LOGGER.debug(
+                "Got a CloseError while trying to send request. Retry request once"
             )
             return await self._async_request(method, url, True, *args, **kwargs)
         except httpx.HTTPError as exc:
@@ -242,15 +242,18 @@ class NgenicBase:
     def _async_delete(self, url: str):
         return self._async_request("delete", f"{API_URL}/{url}", False)
 
-    async def _async_get(self, url: str):
+    async def _async_get(self, url: str, invalidate_cache: bool = False):
         url = f"{API_URL}/{url}"
         now = monotonic()
         cache_key = hash(url)
 
-        if cache_key in self._cache:
+        if invalidate_cache:
+            _LOGGER.debug("Cache invalidated for %s", url)
+
+        if not invalidate_cache and cache_key in self._cache:
             expiration, result = self._cache[cache_key]
             if expiration > now:
-                LOG.debug("Cache hit for %s", url)
+                _LOGGER.debug("Cache hit for %s", url)
                 return result
 
         result = await self._async_request("get", url, False)
@@ -261,7 +264,7 @@ class NgenicBase:
         return result
 
     def _async_post(self, url: str, data: Any = None, is_json: bool = True, **kwargs):
-        data, headers = self._prehandle_write(data, is_json, kwargs)
+        data, headers = self._prehandle_write(data, is_json, **kwargs)
         return self._async_request(
             "post", f"{API_URL}/{url}", False, data=data, headers=headers
         )

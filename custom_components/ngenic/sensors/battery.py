@@ -21,7 +21,7 @@ class NgenicBatterySensor(NgenicSensor):
         """Return the unit of measurement."""
         return "%"
 
-    async def _async_fetch_measurement(self):
+    async def _async_fetch_measurement(self, first_load: bool = False):
         if isinstance(self._node, Node):
             status = await self._node.async_status()
 

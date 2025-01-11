@@ -4,10 +4,11 @@ from typing import Any
 
 import httpx
 
-from ..const import API_PATH  # noqa: TID252
+from ..const import API_PATH, SETPONT_SCHEDULE_NAME  # noqa: TID252
 from .base import NgenicBase
 from .node import Node
 from .room import Room
+from .setpoint_schedule import SetpointSchedule
 
 
 class Tune(NgenicBase):
@@ -74,3 +75,30 @@ class Tune(NgenicBase):
         """
         url = API_PATH["nodes"].format(tuneUuid=self.uuid(), nodeUuid=nodeUuid)
         return await self._async_parse_new_instance(url, Node, tuneUuid=self.uuid())
+
+    async def async_setpoint_schedule(
+        self, invalidate_cache: bool = False
+    ) -> SetpointSchedule:
+        """Fetch the setpoint schedule for Home Assistant.
+
+        :param bool invalidate_cache:
+            if the cache should be invalidated or not (default: False)
+        :return:
+            the setpoint schedule
+        :rtype:
+            `~ngenic.models.setpoint_schedule.SetPointSchedule`
+        """
+
+        url = API_PATH["setpoint_schedules"].format(tuneUuid=self.uuid())
+        rsp_json = self._parse(await self._async_get(url, invalidate_cache))
+
+        for obj in rsp_json:
+            if obj["name"] == SETPONT_SCHEDULE_NAME:
+                return self._new_instance(SetpointSchedule, obj, tuneUuid=self.uuid())
+
+        new_json = {
+            "name": SETPONT_SCHEDULE_NAME,
+            "autoTune": True,
+            "lowestSetpoint": 12,
+        }
+        return self._new_instance(SetpointSchedule, new_json, tuneUuid=self.uuid())

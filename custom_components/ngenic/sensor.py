@@ -11,6 +11,11 @@ from .ngenicpy import AsyncNgenic
 from .ngenicpy.models.measurement import MeasurementType
 from .ngenicpy.models.node import NodeType
 from .ngenicpy.models.room import Room
+from .sensors.away import (
+    NgenicAwayModeSensor,
+    NgenicAwayScheduledFromSensor,
+    NgenicAwayScheduledToSensor,
+)
 from .sensors.battery import NgenicBatterySensor
 from .sensors.energy import NgenicEnergySensor
 from .sensors.energy_last_month import NgenicEnergyLastMonthSensor
@@ -25,12 +30,37 @@ async def async_setup_entry(
     hass: HomeAssistant, _, async_add_entities: AddEntitiesCallback
 ):
     """Set up the sensor platform."""
-    ngenic: AsyncNgenic = hass.data[DOMAIN][DATA_CLIENT]
 
+    ngenic: AsyncNgenic = hass.data[DOMAIN][DATA_CLIENT]
     devices = []
 
     for tune in await ngenic.async_tunes():
         rooms = await tune.async_rooms()
+
+        devices.append(
+            NgenicAwayModeSensor(
+                hass,
+                ngenic,
+                timedelta(minutes=5),
+                tune,
+            )
+        )
+        devices.append(
+            NgenicAwayScheduledFromSensor(
+                hass,
+                ngenic,
+                timedelta(minutes=5),
+                tune,
+            )
+        )
+        devices.append(
+            NgenicAwayScheduledToSensor(
+                hass,
+                ngenic,
+                timedelta(minutes=5),
+                tune,
+            )
+        )
 
         for node in await tune.async_nodes():
             node_name = f"Ngenic {node.get_type().name.lower()}"
@@ -51,6 +81,7 @@ async def async_setup_entry(
                 model=node.get_type().name.capitalize(),
                 name=node_name,
             )
+
             measurement_types = await node.async_measurement_types()
             if MeasurementType.TEMPERATURE in measurement_types:
                 devices.append(
@@ -175,7 +206,7 @@ async def async_setup_entry(
 
     for device in devices:
         # Initial update (will not update hass state)
-        await device.async_update()
+        await device.async_update(True)
 
         # Setup update timer
         device.setup_updater()

@@ -23,7 +23,7 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-NGENIC_PLATFORMS = [Platform.CLIMATE, Platform.SENSOR]
+NGENIC_PLATFORMS = [Platform.CLIMATE, Platform.SENSOR, Platform.SWITCH]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):

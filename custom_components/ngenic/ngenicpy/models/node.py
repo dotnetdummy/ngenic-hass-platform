@@ -131,7 +131,7 @@ class Node(NgenicBase):
             url, Measurement, measurement_type=measurement_type
         )
 
-    async def async_status(self) -> NodeStatus:
+    async def async_status(self) -> NodeStatus | None:
         """Get status about this Node.
 
         There are no API for getting the status for a single node, so we

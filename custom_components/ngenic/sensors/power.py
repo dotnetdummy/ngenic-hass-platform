@@ -18,7 +18,7 @@ class NgenicPowerSensor(NgenicSensor):
         """Return the unit of measurement."""
         return UnitOfPower.WATT
 
-    async def _async_fetch_measurement(self):
+    async def _async_fetch_measurement(self, first_load: bool = False):
         """Fetch new power state data for the sensor.
 
         The NGenic API returns a float with kW but HA huses W so we need to multiply by 1000
