@@ -89,7 +89,7 @@ class NgenicTune(ClimateEntity):
         self._target_temperature = None
         self._updater = None
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"tune_{self._node.uuid()}")},
+            identifiers={(DOMAIN, f"tune_{self._tune.uuid()}")},
             manufacturer=BRAND,
             name=self._name,
             model="Tune",

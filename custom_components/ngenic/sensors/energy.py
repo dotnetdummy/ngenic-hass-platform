@@ -39,7 +39,7 @@ class NgenicEnergySensor(NgenicSensor):
         """Return the unit of measurement."""
         return UnitOfEnergy.KILO_WATT_HOUR
 
-    async def _async_fetch_measurement(self):
+    async def _async_fetch_measurement(self, first_load: bool = False):
         """Ask for measurements for a duration.
 
         This requires some further inputs, so we'll override the _async_fetch_measurement method.

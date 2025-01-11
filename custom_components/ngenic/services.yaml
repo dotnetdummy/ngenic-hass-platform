@@ -12,3 +12,23 @@ set_active_control:
       description: Use this room as input to temperature regulation or not
       selector:
         boolean:
+set_away_schedule:
+  name: Set Away Schedule
+  description: Use this to set a schedule for when "away mode" will be activated. This uses the planning functionality with "auto tune" that will maximize your savings but never go below 12c.
+  fields:
+    start_time:
+      name: start_time
+      description: The start time for the schedule
+      selector:
+        datetime:
+    end_time:
+      name: end_time
+      description: The end time for the schedule
+      selector:
+        datetime:
+activate_away:
+  name: Activate Away
+  description: Use this to activate "away mode" directly. This will plan a schedule from now and 60 days forward, and uses "auto tune" that will maximize your savings but never go below 12c.
+deactivate_away:
+  name: Deactivate Away
+  description: Use this to deactivate "away mode" directly, ignoring if the schedule is fulfilled or not.
