@@ -23,7 +23,7 @@ class SetpointSchedule(NgenicBase):
 
         super().__init__(session=session, json_data=json_data)
 
-        now = (datetime.now(UTC) + timedelta(days=60)).replace(second=0, microsecond=0)
+        now = datetime.now(UTC).replace(second=0, microsecond=0)
 
         self._active = (
             (now >= self.start_time() and now < self.end_time())
@@ -66,7 +66,7 @@ class SetpointSchedule(NgenicBase):
     def activate_away(self) -> None:
         """Set the away schedule as activated from now on."""
         self._active = True
-        now = (datetime.now(UTC) + timedelta(days=60)).replace(second=0, microsecond=0)
+        now = datetime.now(UTC).replace(second=0, microsecond=0)
 
         # set schedule startTime to datetime.now(UTC) in ISO 8601:2004
         self["startTime"] = now.isoformat()
