@@ -12,6 +12,7 @@ SERVICE_SET_ACTIVE_CONTROL: Final[str] = "set_active_control"
 SERVICE_SET_AWAY_SCHEDULE: Final[str] = "set_away_schedule"
 SERVICE_ACTIVATE_AWAY: Final[str] = "activate_away"
 SERVICE_DEACTIVATE_AWAY: Final[str] = "deactivate_away"
+SETPONT_SCHEDULE_NAME: Final[str] = "Home Assistant away schedule"
 
 
 """

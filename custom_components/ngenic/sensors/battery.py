@@ -2,9 +2,10 @@
 
 import logging
 
+from ngenicpy.models.node import Node, NodeStatus  # noqa: TID252
+
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 
-from ..ngenicpy.models.node import Node, NodeStatus  # noqa: TID252
 from .base import NgenicSensor
 
 _LOGGER = logging.getLogger(__name__)

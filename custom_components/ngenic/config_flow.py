@@ -3,6 +3,8 @@
 import logging
 from typing import Any
 
+from ngenicpy import AsyncNgenic
+from ngenicpy.exceptions import ClientException
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -10,8 +12,6 @@ from homeassistant.const import CONF_TOKEN
 from homeassistant.core import HomeAssistant, callback
 
 from .const import DOMAIN
-from .ngenicpy import AsyncNgenic
-from .ngenicpy.exceptions import ClientException
 
 _LOGGER = logging.getLogger(__name__)
 

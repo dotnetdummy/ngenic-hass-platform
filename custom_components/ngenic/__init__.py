@@ -1,5 +1,6 @@
 """Support for Ngenic Tune."""
 
+from ngenicpy import AsyncNgenic
 import voluptuous as vol
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
@@ -9,7 +10,6 @@ from homeassistant.helpers import config_validation as cv
 
 from .config_flow import configured_instances
 from .const import DATA_CLIENT, DATA_CONFIG, DOMAIN, SERVICE_SET_ACTIVE_CONTROL
-from .ngenicpy import AsyncNgenic
 from .services import async_register_services
 
 CONFIG_SCHEMA = vol.Schema(

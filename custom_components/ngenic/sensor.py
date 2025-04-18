@@ -2,15 +2,16 @@
 
 from datetime import timedelta
 
+from ngenicpy import AsyncNgenic
+from ngenicpy.models.measurement import MeasurementType
+from ngenicpy.models.node import NodeType
+from ngenicpy.models.room import Room
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import BRAND, DATA_CLIENT, DOMAIN
-from .ngenicpy import AsyncNgenic
-from .ngenicpy.models.measurement import MeasurementType
-from .ngenicpy.models.node import NodeType
-from .ngenicpy.models.room import Room
 from .sensors.away import (
     NgenicAwayModeSensor,
     NgenicAwayScheduledFromSensor,
@@ -71,7 +72,7 @@ async def async_setup_entry(
                 # we'll use the room name as the sensor name
                 for room in rooms:
                     if room["nodeUuid"] == node.uuid():
-                        node_name = f"{node_name} {room["name"]}"
+                        node_name = f"{node_name} {room['name']}"
                         node_room = room
                         break
 

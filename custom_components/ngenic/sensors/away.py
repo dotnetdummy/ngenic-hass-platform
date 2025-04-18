@@ -3,14 +3,20 @@
 from datetime import timedelta
 import logging
 
+from ngenicpy import AsyncNgenic  # noqa: TID252
+from ngenicpy.models.tune import Tune  # noqa: TID252
+
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, slugify
 
-from ..const import BRAND, DOMAIN, UPDATE_SCHEDULE_TOPIC  # noqa: TID252
-from ..ngenicpy import AsyncNgenic  # noqa: TID252
-from ..ngenicpy.models.tune import Tune  # noqa: TID252
+from ..const import (  # noqa: TID252
+    BRAND,
+    DOMAIN,
+    SETPONT_SCHEDULE_NAME,
+    UPDATE_SCHEDULE_TOPIC,
+)
 from .base import SlimNgenicSensor
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,7 +35,7 @@ class NgenicBaseAwaySensor(SlimNgenicSensor):
     ) -> None:
         """Initialize the sensor."""
 
-        device_info_name = f"Ngenic Tune {tune["tuneName"]}"
+        device_info_name = f"Ngenic Tune {tune['tuneName']}"
 
         super().__init__(
             hass,
@@ -38,7 +44,7 @@ class NgenicBaseAwaySensor(SlimNgenicSensor):
             f"{device_info_name} {name}",
             update_interval,
             DeviceInfo(
-                identifiers={(DOMAIN, f"tune_{tune["tuneUuid"]}")},
+                identifiers={(DOMAIN, f"tune_{tune['tuneUuid']}")},
                 manufacturer=BRAND,
                 name=device_info_name,
                 model="Tune",
@@ -77,7 +83,9 @@ class NgenicAwayModeSensor(NgenicBaseAwaySensor):
 
     async def _async_fetch_measurement(self, first_load: bool = False):
         if isinstance(self._tune, Tune):
-            schedule = await self._tune.async_setpoint_schedule(not first_load)
+            schedule = await self._tune.async_setpoint_schedule(
+                SETPONT_SCHEDULE_NAME, not first_load
+            )
             return "Active" if schedule.active() else "Inactive"
         return None
 
@@ -102,7 +110,9 @@ class NgenicAwayScheduledFromSensor(NgenicBaseAwaySensor):
     async def _async_fetch_measurement(self, first_load: bool = False):
         val: str | None = None
         if isinstance(self._tune, Tune):
-            schedule = await self._tune.async_setpoint_schedule(not first_load)
+            schedule = await self._tune.async_setpoint_schedule(
+                SETPONT_SCHEDULE_NAME, not first_load
+            )
             try:
                 val = schedule.start_time().isoformat()
             except:  # noqa: E722
@@ -130,7 +140,9 @@ class NgenicAwayScheduledToSensor(NgenicBaseAwaySensor):
     async def _async_fetch_measurement(self, first_load: bool = False):
         val: str | None = None
         if isinstance(self._tune, Tune):
-            schedule = await self._tune.async_setpoint_schedule(not first_load)
+            schedule = await self._tune.async_setpoint_schedule(
+                SETPONT_SCHEDULE_NAME, not first_load
+            )
             try:
                 val = schedule.end_time().isoformat()
             except:  # noqa: E722

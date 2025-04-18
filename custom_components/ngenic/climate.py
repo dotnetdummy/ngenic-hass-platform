@@ -3,6 +3,10 @@
 from datetime import timedelta
 import logging
 
+from ngenicpy import AsyncNgenic
+from ngenicpy.models.measurement import MeasurementType
+from ngenicpy.models.tune import Tune
+
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
@@ -15,9 +19,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import BRAND, DATA_CLIENT, DOMAIN
-from .ngenicpy import AsyncNgenic
-from .ngenicpy.models.measurement import MeasurementType
-from .ngenicpy.models.tune import Tune
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ class NgenicTune(ClimateEntity):
         self._hass = hass
         self._available = False
         self._ngenic = ngenic
-        self._name = f"Ngenic Tune {tune["name"]}"
+        self._name = f"Ngenic Tune {tune['name']}"
         self._tune = tune
         self._room = control_room
         self._node = control_node

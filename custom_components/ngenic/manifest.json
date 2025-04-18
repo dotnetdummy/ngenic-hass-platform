@@ -1,11 +1,16 @@
 {
   "domain": "ngenic",
   "name": "Ngenic Tune",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "config_flow": true,
   "documentation": "https://github.com/dotnetdummy/ngenic-hass-platform",
   "issue_tracker": "https://github.com/dotnetdummy/ngenic-hass-platform/issues",
   "dependencies": [],
-  "codeowners": ["@sfalkman", "@dotnetdummy"],
-  "requirements": []
+  "codeowners": [
+    "@dotnetdummy",
+    "@sfalkman"
+  ],
+  "requirements": [
+    "ngenicpy==0.4.2"
+  ]
 }

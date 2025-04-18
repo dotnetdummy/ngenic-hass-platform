@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from ngenicpy import AsyncNgenic
 import voluptuous as vol
 
 from homeassistant.core import HomeAssistant
@@ -17,9 +18,9 @@ from .const import (
     SERVICE_DEACTIVATE_AWAY,
     SERVICE_SET_ACTIVE_CONTROL,
     SERVICE_SET_AWAY_SCHEDULE,
+    SETPONT_SCHEDULE_NAME,
     UPDATE_SCHEDULE_TOPIC,
 )
-from .ngenicpy import AsyncNgenic
 
 
 def async_register_services(hass: HomeAssistant):
@@ -45,30 +46,36 @@ def async_register_services(hass: HomeAssistant):
         end_time_tz = end_time.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
         ngenic: AsyncNgenic = hass.data[DOMAIN][DATA_CLIENT]
         for tune in await ngenic.async_tunes():
-            schedule = await tune.async_setpoint_schedule()
+            schedule = await tune.async_setpoint_schedule(SETPONT_SCHEDULE_NAME)
             schedule.set_schedule(start_time_tz, end_time_tz)
             await schedule.async_update()
-            schedule = await tune.async_setpoint_schedule(True)  # revalidate cache
+            schedule = await tune.async_setpoint_schedule(
+                SETPONT_SCHEDULE_NAME, True
+            )  # revalidate cache
             async_dispatcher_send(hass, UPDATE_SCHEDULE_TOPIC)
 
     async def activate_away(service) -> None:
         """Activate away."""
         ngenic: AsyncNgenic = hass.data[DOMAIN][DATA_CLIENT]
         for tune in await ngenic.async_tunes():
-            schedule = await tune.async_setpoint_schedule()
+            schedule = await tune.async_setpoint_schedule(SETPONT_SCHEDULE_NAME)
             schedule.activate_away()
             await schedule.async_update()
-            schedule = await tune.async_setpoint_schedule(True)  # revalidate cache
+            schedule = await tune.async_setpoint_schedule(
+                SETPONT_SCHEDULE_NAME, True
+            )  # revalidate cache
             async_dispatcher_send(hass, UPDATE_SCHEDULE_TOPIC)
 
     async def deactivate_away(service) -> None:
         """Deactivate away."""
         ngenic: AsyncNgenic = hass.data[DOMAIN][DATA_CLIENT]
         for tune in await ngenic.async_tunes():
-            schedule = await tune.async_setpoint_schedule()
+            schedule = await tune.async_setpoint_schedule(SETPONT_SCHEDULE_NAME)
             schedule.deactivate_away()
             await schedule.async_update()
-            schedule = await tune.async_setpoint_schedule(True)  # revalidate cache
+            schedule = await tune.async_setpoint_schedule(
+                SETPONT_SCHEDULE_NAME, True
+            )  # revalidate cache
             async_dispatcher_send(hass, UPDATE_SCHEDULE_TOPIC)
 
     # Register services

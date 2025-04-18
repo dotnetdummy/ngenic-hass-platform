@@ -2,9 +2,9 @@
 
 import logging
 
-import homeassistant.util.dt as dt_util
+from ngenicpy.models.node import Node  # noqa: TID252
 
-from ..ngenicpy.models.node import Node  # noqa: TID252
+import homeassistant.util.dt as dt_util
 
 TIME_ZONE = (
     "Z" if str(dt_util.DEFAULT_TIME_ZONE) == "UTC" else str(dt_util.DEFAULT_TIME_ZONE)

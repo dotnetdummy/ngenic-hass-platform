@@ -2,6 +2,10 @@
 
 import logging
 
+from ngenicpy import AsyncNgenic
+from ngenicpy.models.setpoint_schedule import SetpointSchedule
+from ngenicpy.models.tune import Tune
+
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.dispatcher import (
@@ -11,10 +15,13 @@ from homeassistant.helpers.dispatcher import (
 from homeassistant.helpers.entity import Callable, DeviceInfo, HomeAssistant
 from homeassistant.util import slugify
 
-from .const import BRAND, DATA_CLIENT, DOMAIN, UPDATE_SCHEDULE_TOPIC
-from .ngenicpy import AsyncNgenic
-from .ngenicpy.models.setpoint_schedule import SetpointSchedule
-from .ngenicpy.models.tune import Tune
+from .const import (
+    BRAND,
+    DATA_CLIENT,
+    DOMAIN,
+    SETPONT_SCHEDULE_NAME,
+    UPDATE_SCHEDULE_TOPIC,
+)
 
 _LOGGER = logging.getLogger(__package__)
 
@@ -41,7 +48,7 @@ class NgenicAwayModeSwitch(SwitchEntity):
     def __init__(self, tune: Tune) -> None:
         """Initialize the switch."""
 
-        device_info_name = f"Ngenic Tune {tune["tuneName"]}"
+        device_info_name = f"Ngenic Tune {tune['tuneName']}"
 
         self._attr_name = f"{device_info_name} Away toggle"
         self._attr_unique_id = slugify(f"{tune.uuid()} {self._attr_name}")
@@ -50,7 +57,7 @@ class NgenicAwayModeSwitch(SwitchEntity):
         self._attr_should_poll = False
         self._attr_device_class = SwitchDeviceClass.SWITCH
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"tune_{tune["tuneUuid"]}")},
+            identifiers={(DOMAIN, f"tune_{tune['tuneUuid']}")},
             manufacturer=BRAND,
             name=device_info_name,
             model="Tune",
@@ -89,7 +96,9 @@ class NgenicAwayModeSwitch(SwitchEntity):
         """Fetch new state data for the switch."""
 
         try:
-            self._schedule = await self._tune.async_setpoint_schedule(not first_load)
+            self._schedule = await self._tune.async_setpoint_schedule(
+                SETPONT_SCHEDULE_NAME, not first_load
+            )
         except Exception:
             # Don't throw an exception if a sensor fails to update.
             _LOGGER.exception("Failed to update (switch=%s)", self.unique_id)

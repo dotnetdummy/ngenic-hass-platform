@@ -4,15 +4,16 @@ from datetime import timedelta
 import logging
 from typing import Any
 
+from ngenicpy import AsyncNgenic  # noqa: TID252
+from ngenicpy.models.measurement import MeasurementType  # noqa: TID252
+from ngenicpy.models.node import Node  # noqa: TID252
+from ngenicpy.models.room import Room  # noqa: TID252
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
 
-from ..ngenicpy import AsyncNgenic  # noqa: TID252
-from ..ngenicpy.models.measurement import MeasurementType  # noqa: TID252
-from ..ngenicpy.models.node import Node  # noqa: TID252
-from ..ngenicpy.models.room import Room  # noqa: TID252
 from . import get_measurement_value
 
 _LOGGER = logging.getLogger(__name__)
@@ -158,11 +159,13 @@ class NgenicSensor(SlimNgenicSensor):
         super().__init__(
             hass,
             ngenic,
-            f"{node.uuid()}-{(
-                measurement_type.name
-                if isinstance(measurement_type, MeasurementType)
-                else measurement_type
-            )}-sensor",
+            f"{node.uuid()}-{
+                (
+                    measurement_type.name
+                    if isinstance(measurement_type, MeasurementType)
+                    else measurement_type
+                )
+            }-sensor",
             name,
             update_interval,
             device_info,
