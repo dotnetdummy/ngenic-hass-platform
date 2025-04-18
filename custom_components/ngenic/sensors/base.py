@@ -181,7 +181,7 @@ class NgenicSensor(SlimNgenicSensor):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        return f"{self._name} {self.device_class}"
+        return f"{self._name} {self.device_class}".replace("_", " ")
 
     @property
     def extra_state_attributes(self):
