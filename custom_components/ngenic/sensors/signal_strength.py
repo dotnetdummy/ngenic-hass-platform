@@ -1,10 +1,15 @@
 """Ngenic Signal Strength Sensor."""
 
+from datetime import timedelta
 import logging
 
-from ngenicpy.models.node import Node, NodeStatus  # noqa: TID252
+from ngenicpy import AsyncNgenic
+from ngenicpy.models.node import Node, NodeStatus
+from ngenicpy.models.room import Room
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import DeviceInfo
 
 from .base import NgenicSensor
 
@@ -16,6 +21,28 @@ class NgenicSignalStrengthSensor(NgenicSensor):
 
     device_class = SensorDeviceClass.SIGNAL_STRENGTH
     state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        ngenic: AsyncNgenic,
+        room: Room,
+        node: Node,
+        name: str,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the sensor."""
+
+        super().__init__(
+            hass,
+            ngenic,
+            room,
+            node,
+            name,
+            timedelta(minutes=5),
+            "SIGNAL",
+            device_info,
+        )
 
     @property
     def unit_of_measurement(self):

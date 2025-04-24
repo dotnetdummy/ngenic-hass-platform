@@ -3,8 +3,8 @@
 from datetime import timedelta
 import logging
 
-from ngenicpy import AsyncNgenic  # noqa: TID252
-from ngenicpy.models.tune import Tune  # noqa: TID252
+from ngenicpy import AsyncNgenic
+from ngenicpy.models.tune import Tune
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.core import HomeAssistant
@@ -49,6 +49,7 @@ class NgenicBaseAwaySensor(SlimNgenicSensor):
                 name=device_info_name,
                 model="Tune",
             ),
+            True,
         )
 
         self._tune = tune

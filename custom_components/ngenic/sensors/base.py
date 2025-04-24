@@ -4,10 +4,10 @@ from datetime import timedelta
 import logging
 from typing import Any
 
-from ngenicpy import AsyncNgenic  # noqa: TID252
-from ngenicpy.models.measurement import MeasurementType  # noqa: TID252
-from ngenicpy.models.node import Node  # noqa: TID252
-from ngenicpy.models.room import Room  # noqa: TID252
+from ngenicpy import AsyncNgenic
+from ngenicpy.models.measurement import MeasurementType
+from ngenicpy.models.node import Node
+from ngenicpy.models.room import Room
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
@@ -30,11 +30,11 @@ class SlimNgenicSensor(SensorEntity):
         name: str,
         update_interval: timedelta,
         device_info: DeviceInfo,
+        should_update_on_startup: bool = False,
     ) -> None:
         """Initialize the sensor."""
         self._state = None
         self._available = False
-        self._unique_id = None
         self._updater = None
         self._hass = hass
         self._ngenic = ngenic
@@ -42,6 +42,7 @@ class SlimNgenicSensor(SensorEntity):
         self._name = name
         self._update_interval = update_interval
         self._attr_device_info = device_info
+        self._should_update_on_startup = should_update_on_startup
 
     @property
     def unique_id(self) -> str:
@@ -51,7 +52,7 @@ class SlimNgenicSensor(SensorEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        return self._name
+        return self._name.title()
 
     @property
     def available(self) -> bool:
@@ -67,6 +68,11 @@ class SlimNgenicSensor(SensorEntity):
     def should_poll(self) -> bool:
         """An update is pushed when device is updated."""
         return False
+
+    @property
+    def should_update_on_startup(self) -> bool:
+        """Return if the sensor should update on startup or not."""
+        return self._should_update_on_startup
 
     async def _force_update(self) -> None:
         """Force update of data."""
@@ -153,6 +159,7 @@ class NgenicSensor(SlimNgenicSensor):
         update_interval: timedelta,
         measurement_type: MeasurementType | str,
         device_info: DeviceInfo,
+        should_update_on_startup: bool = False,
     ) -> None:
         """Initialize the sensor."""
 
@@ -169,6 +176,7 @@ class NgenicSensor(SlimNgenicSensor):
             name,
             update_interval,
             device_info,
+            should_update_on_startup,
         )
 
         self._node = node
@@ -181,7 +189,7 @@ class NgenicSensor(SlimNgenicSensor):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        return f"{self._name} {self.device_class}".replace("_", " ")
+        return f"{self._name} {self.device_class}".replace("_", " ").title()
 
     @property
     def extra_state_attributes(self):

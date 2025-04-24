@@ -2,8 +2,15 @@
 
 from datetime import datetime, timedelta
 
+from ngenicpy import AsyncNgenic
+from ngenicpy.models.measurement import MeasurementType
+from ngenicpy.models.node import Node
+from ngenicpy.models.room import Room
+
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.const import UnitOfEnergy
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import DeviceInfo
 
 from . import TIME_ZONE, get_measurement_value
 from .base import NgenicSensor
@@ -32,10 +39,43 @@ class NgenicEnergyLastMonthSensor(NgenicSensor):
 
     device_class = SensorDeviceClass.ENERGY
 
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        ngenic: AsyncNgenic,
+        room: Room,
+        node: Node,
+        name: str,
+        measurement_type: MeasurementType,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the sensor."""
+
+        super().__init__(
+            hass,
+            ngenic,
+            room,
+            node,
+            name,
+            timedelta(minutes=60),
+            measurement_type,
+            device_info,
+        )
+
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
         return UnitOfEnergy.KILO_WATT_HOUR
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{self._name} last month {self._measurement_type.name.replace('_', ' ')}".title()
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for the sensor."""
+        return f"{self._node.uuid()}-{self._measurement_type.name}-sensor-last-month"
 
     async def _async_fetch_measurement(self, first_load: bool = False):
         """Ask for measurements for a duration.
@@ -50,13 +90,3 @@ class NgenicEnergyLastMonthSensor(NgenicSensor):
             to_dt=to_dt,
         )
         return round(current, 1)
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return f"{self._name} last month energy"
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for the sensor."""
-        return f"{self._node.uuid()}-{self._measurement_type.name}-sensor-last-month"

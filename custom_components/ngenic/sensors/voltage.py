@@ -1,25 +1,25 @@
-"""Ngenic Battery Sensor."""
+"""Ngenic Power Sensor."""
 
 from datetime import timedelta
-import logging
 
 from ngenicpy import AsyncNgenic
-from ngenicpy.models.node import Node, NodeStatus
+from ngenicpy.models.measurement import MeasurementType
+from ngenicpy.models.node import Node
 from ngenicpy.models.room import Room
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.const import UnitOfElectricPotential
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 
+from . import get_measurement_value
 from .base import NgenicSensor
 
-_LOGGER = logging.getLogger(__name__)
 
+class NgenicVoltageSensor(NgenicSensor):
+    """Representation of an Ngenic Voltage Sensor."""
 
-class NgenicBatterySensor(NgenicSensor):
-    """Representation of an Ngenic Battery Sensor."""
-
-    device_class = SensorDeviceClass.BATTERY
+    device_class = SensorDeviceClass.VOLTAGE
     state_class = SensorStateClass.MEASUREMENT
 
     def __init__(
@@ -29,6 +29,7 @@ class NgenicBatterySensor(NgenicSensor):
         room: Room,
         node: Node,
         name: str,
+        measurement_type: MeasurementType,
         device_info: DeviceInfo,
     ) -> None:
         """Initialize the sensor."""
@@ -39,24 +40,24 @@ class NgenicBatterySensor(NgenicSensor):
             room,
             node,
             name,
-            timedelta(minutes=5),
-            "BATTERY",
+            timedelta(minutes=2),
+            measurement_type,
             device_info,
         )
 
     @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{self._name} {self._measurement_type.name.replace('_', ' ')}".title()
+
+    @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
-        return "%"
+        return UnitOfElectricPotential.VOLT
 
     async def _async_fetch_measurement(self, first_load: bool = False):
-        if isinstance(self._node, Node):
-            status = await self._node.async_status()
-
-        if isinstance(status, NodeStatus):
-            current = status.battery_percentage()
-        else:
-            _LOGGER.debug("Assume battery is full if we can't get the status")
-            current = 100
-
-        return current
+        """Fetch new voltage state data for the sensor."""
+        val = await get_measurement_value(
+            self._node, measurement_type=self._measurement_type, invalidate_cache=True
+        )
+        return round(val, 1)
