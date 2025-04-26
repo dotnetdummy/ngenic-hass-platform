@@ -11,6 +11,6 @@
     "@sfalkman"
   ],
   "requirements": [
-    "ngenicpy==0.5.0"
+    "ngenicpy==0.5.1"
   ]
 }
