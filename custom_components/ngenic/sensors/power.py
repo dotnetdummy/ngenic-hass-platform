@@ -1,11 +1,26 @@
 """Ngenic Power Sensor."""
 
+import logging # Added logging
 from datetime import timedelta
+from typing import Optional, Any # Added Optional, Any
 
 from ngenicpy import AsyncNgenic
-from ngenicpy.models.measurement import MeasurementType
-from ngenicpy.models.node import Node
-from ngenicpy.models.room import Room
+try:
+    from ngenicpy.models.measurement import MeasurementType
+except ImportError:
+    logging.getLogger(__name__).warning("ngenicpy.models.measurement.MeasurementType not found, using Any type instead.")
+    MeasurementType = Any # type: ignore
+try:
+    from ngenicpy.models.node import Node
+except ImportError:
+    logging.getLogger(__name__).warning("ngenicpy.models.node.Node not found, using Any type instead.")
+    Node = Any # type: ignore
+try:
+    from ngenicpy.models.room import Room
+except ImportError:
+    logging.getLogger(__name__).warning("ngenicpy.models.room.Room not found, using Any type instead.")
+    Room = Any # type: ignore
+
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import UnitOfPower
@@ -19,49 +34,60 @@ from .base import NgenicSensor
 class NgenicPowerSensor(NgenicSensor):
     """Representation of an Ngenic Power Sensor."""
 
-    device_class = SensorDeviceClass.POWER
-    state_class = SensorStateClass.MEASUREMENT
+    device_class: SensorDeviceClass = SensorDeviceClass.POWER
+    state_class: SensorStateClass = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement: str = UnitOfPower.WATT # Set as attribute
+    # _attr_icon: str = "mdi:lightning-bolt" # Example icon
 
     def __init__(
         self,
         hass: HomeAssistant,
         ngenic: AsyncNgenic,
-        room: Room,
+        room: Optional[Room], # room can be Optional
         node: Node,
-        name: str,
-        measurement_type: MeasurementType,
+        name: str, # Base name
+        measurement_type: MeasurementType, # e.g., MeasurementType.POWER or MeasurementType.PRODUCED_POWER
         device_info: DeviceInfo,
     ) -> None:
         """Initialize the sensor."""
-
         super().__init__(
             hass,
             ngenic,
             room,
             node,
-            name,
-            timedelta(minutes=2),
-            measurement_type,
+            name, # Pass base name
+            timedelta(minutes=2),  # update_interval
+            measurement_type,      # measurement_type
             device_info,
-            True,
+            True,  # should_update_on_startup
         )
+        # The name property below will override the default name generation in NgenicSensor
+        # to include the specific measurement type (POWER or PRODUCED_POWER).
 
     @property
-    def name(self):
+    def name(self) -> str: # Typed return
         """Return the name of the sensor."""
-        return f"{self._name} {self._measurement_type.name.replace('_', ' ')}".title()
+        measurement_type_name: str = "Power" # Default
+        if hasattr(self._measurement_type, "name"):
+            measurement_type_name = self._measurement_type.name.replace('_', ' ') # type: ignore
+        
+        return f"{self._name} {measurement_type_name}".title()
 
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement."""
-        return UnitOfPower.WATT
+    # unit_of_measurement property is now handled by _attr_native_unit_of_measurement
 
-    async def _async_fetch_measurement(self, first_load: bool = False):
+    async def _async_fetch_measurement(self, first_load: bool = False) -> Optional[float]: # Return Optional[float]
         """Fetch new power state data for the sensor.
 
-        The NGenic API returns a float with kW but HA huses W so we need to multiply by 1000
+        The NGenic API returns a float with kW but HA uses W so we need to multiply by 1000.
         """
-        current = await get_measurement_value(
-            self._node, measurement_type=self._measurement_type, invalidate_cache=True
+        # get_measurement_value now returns Optional[float] (in kW for power)
+        val_kw: Optional[float] = await get_measurement_value(
+            self._node, # type: ignore[arg-type]
+            measurement_type=self._measurement_type, # type: ignore[arg-type]
+            invalidate_cache=True # Or based on first_load if needed
         )
-        return round(current * 1000.0, 1)
+        
+        if val_kw is not None:
+            val_w = val_kw * 1000.0
+            return round(val_w, 1) # Round to 1 decimal place for W
+        return None
