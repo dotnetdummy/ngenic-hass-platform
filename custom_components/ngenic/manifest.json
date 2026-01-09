@@ -1,7 +1,7 @@
 {
   "domain": "ngenic",
   "name": "Ngenic Tune",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "config_flow": true,
   "documentation": "https://github.com/dotnetdummy/ngenic-hass-platform",
   "issue_tracker": "https://github.com/dotnetdummy/ngenic-hass-platform/issues",

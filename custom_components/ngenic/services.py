@@ -84,7 +84,7 @@ def async_register_services(hass: HomeAssistant):
         hass.services.async_register(
             DOMAIN,
             SERVICE_SET_ACTIVE_CONTROL,
-            verify_domain_control(hass, DOMAIN)(set_active_control),
+            verify_domain_control(DOMAIN)(set_active_control),
             schema=vol.Schema(
                 {
                     vol.Required("room_uuid"): cv.string,
@@ -97,7 +97,7 @@ def async_register_services(hass: HomeAssistant):
         hass.services.async_register(
             DOMAIN,
             SERVICE_SET_AWAY_SCHEDULE,
-            verify_domain_control(hass, DOMAIN)(set_away_schedule),
+            verify_domain_control(DOMAIN)(set_away_schedule),
             schema=vol.Schema(
                 {
                     vol.Required("start_time"): cv.datetime,
@@ -110,12 +110,12 @@ def async_register_services(hass: HomeAssistant):
         hass.services.async_register(
             DOMAIN,
             SERVICE_ACTIVATE_AWAY,
-            verify_domain_control(hass, DOMAIN)(activate_away),
+            verify_domain_control(DOMAIN)(activate_away),
         )
 
     if not hass.services.has_service(DOMAIN, SERVICE_DEACTIVATE_AWAY):
         hass.services.async_register(
             DOMAIN,
             SERVICE_DEACTIVATE_AWAY,
-            verify_domain_control(hass, DOMAIN)(deactivate_away),
+            verify_domain_control(DOMAIN)(deactivate_away),
         )
