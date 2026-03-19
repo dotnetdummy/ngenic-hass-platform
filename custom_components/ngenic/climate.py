@@ -180,5 +180,12 @@ class NgenicTune(ClimateEntity):
             self._available = False
             return
 
-        self._current_temperature = round(current["value"], 1)
-        self._target_temperature = round(target_room["targetTemperature"], 1)
+        if current is not None and "value" in current:
+            self._current_temperature = round(current["value"], 1)
+        else:
+            self._current_temperature = None
+
+        if target_room is not None and "targetTemperature" in target_room:
+            self._target_temperature = round(target_room["targetTemperature"], 1)
+        else:
+            self._target_temperature = None
