@@ -180,5 +180,14 @@ class NgenicTune(ClimateEntity):
             self._available = False
             return
 
-        self._current_temperature = round(current["value"], 1)
-        self._target_temperature = round(target_room["targetTemperature"], 1)
+        try:
+            self._current_temperature = round(current["value"], 1) if current else None
+        except (AttributeError, KeyError, TypeError):
+            _LOGGER.warning("Could not read temperature measurement for '%s'", self.unique_id)
+            self._current_temperature = None
+
+        try:
+            self._target_temperature = round(target_room["targetTemperature"], 1) if target_room else None
+        except (AttributeError, KeyError, TypeError):
+            _LOGGER.warning("Could not read target temperature for '%s'", self.unique_id)
+            self._target_temperature = None
