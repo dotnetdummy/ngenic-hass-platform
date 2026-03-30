@@ -35,8 +35,16 @@ async def get_measurement_value(node: Node, **kwargs) -> int:
     elif isinstance(measurement, list):
         # using datetime will return a list of measurements
         # we'll use the last item in that list
-        measurement_val = measurement[-1]["value"]
+        try:
+            measurement_val = measurement[-1]["value"]
+        except (AttributeError, KeyError, TypeError):
+            _LOGGER.warning("Could not read value from measurement list item")
+            measurement_val = 0
     else:
-        measurement_val = measurement["value"]
+        try:
+            measurement_val = measurement["value"]
+        except (AttributeError, KeyError, TypeError):
+            _LOGGER.warning("Could not read value from measurement (type=%s)", type(measurement).__name__)
+            measurement_val = 0
 
     return measurement_val
