@@ -180,5 +180,23 @@ class NgenicTune(ClimateEntity):
             self._available = False
             return
 
+        # A successful call can still return no measurement or no target
+        # room (a data gap upstream, not an exception) -- handle that the
+        # same way as a failed fetch instead of crashing on current["value"].
+        if current is None or current.get("value") is None:
+            _LOGGER.warning(
+                "No temperature measurement returned for '%s'; marking unavailable",
+                self.unique_id,
+            )
+            self._available = False
+            return
+        if target_room is None or target_room.get("targetTemperature") is None:
+            _LOGGER.warning(
+                "No target temperature returned for '%s'; marking unavailable",
+                self.unique_id,
+            )
+            self._available = False
+            return
+
         self._current_temperature = round(current["value"], 1)
         self._target_temperature = round(target_room["targetTemperature"], 1)
