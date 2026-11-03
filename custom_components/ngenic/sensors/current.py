@@ -10,7 +10,7 @@ from ngenicpy.models.room import Room
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import UnitOfElectricCurrent
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 
 from . import get_measurement_value
 from .base import NgenicSensor
