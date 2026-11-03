@@ -42,6 +42,8 @@ class NgenicBatterySensor(NgenicSensor):
             timedelta(minutes=5),
             "BATTERY",
             device_info,
+            # battery and signal share the cached node status, so this is a single request per node
+            True,
         )
 
     @property
