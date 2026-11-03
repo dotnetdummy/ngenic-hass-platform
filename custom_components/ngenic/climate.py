@@ -18,11 +18,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
 
 from .const import BRAND, DATA_CLIENT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+# Tune system Nodes report data in intervals of five minutes
+SCAN_INTERVAL = timedelta(minutes=5)
 
 
 async def async_setup_entry(
@@ -38,37 +40,34 @@ async def async_setup_entry(
         # listing tunes contain less information than when querying a single tune
         tune = await ngenic.async_tune(tmp_tune.uuid())
 
-        # the room whose sensor data and target temperature should be used as inputs to the Tune control system
-        # can be found either directly on the tune, or by looking at the activeControl property on the room
-        # object. if roomToControlUuid is set, it takes precedence and the activeControl attribute will not be used
-        control_room_uuid = tune["roomToControlUuid"]
-        if not control_room_uuid:
-            control_room_uuid = next(
-                (room["uuid"] for room in tune["rooms"] if room["activeControl"] is True),
-                None,
-            )
-        if not control_room_uuid:
+        if not _get_control_room_uuid(tune):
             _LOGGER.warning("No control room found for Tune '%s'", tune["name"])
             continue
 
-        control_room = await tune.async_room(control_room_uuid)
-
-        # get the room node
-        control_node = await tune.async_node(control_room["nodeUuid"])
-
-        device = NgenicTune(hass, ngenic, tune, control_room, control_node)
+        device = NgenicTune(ngenic, tune)
 
         _async_migrate_unique_id(hass, tune.uuid(), device.unique_id)
 
         # Initial update
         await device.async_update()
 
-        # Setup update timer
-        device.setup_updater()
-
         devices.append(device)
 
     async_add_entities(devices)
+
+
+def _get_control_room_uuid(tune: Tune) -> str | None:
+    """Return the uuid of the room that is used as input to the Tune control system.
+
+    The room can be found either directly on the tune, or by looking at the activeControl property on the room
+    object. if roomToControlUuid is set, it takes precedence and the activeControl attribute will not be used
+    """
+    if tune["roomToControlUuid"]:
+        return tune["roomToControlUuid"]
+    return next(
+        (room["uuid"] for room in tune["rooms"] if room["activeControl"] is True),
+        None,
+    )
 
 
 @callback
@@ -115,25 +114,15 @@ def _async_migrate_unique_id(hass: HomeAssistant, tune_uuid: str, unique_id: str
 class NgenicTune(ClimateEntity):
     """Representation of an Ngenic Thermostat."""
 
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        ngenic: AsyncNgenic,
-        tune: Tune,
-        control_room,
-        control_node,
-    ) -> None:
+    def __init__(self, ngenic: AsyncNgenic, tune: Tune) -> None:
         """Initialize the thermostat."""
-        self._hass = hass
         self._available = False
         self._ngenic = ngenic
         self._name = f"Ngenic Tune {tune['name']}"
         self._tune = tune
-        self._room = control_room
-        self._node = control_node
+        self._room = None
         self._current_temperature = None
         self._target_temperature = None
-        self._updater = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"tune_{self._tune.uuid()}")},
             manufacturer=BRAND,
@@ -186,37 +175,37 @@ class NgenicTune(ClimateEntity):
         """Must be implemented."""
         return [HVACMode.HEAT]
 
-    async def async_will_remove_from_hass(self):
-        """Remove updater when sensor is removed."""
-        if self._updater:
-            self._updater()
-            self._updater = None
-
-    def setup_updater(self):
-        """Configure a timer that will execute an update every update interval."""
-        # async_track_time_interval returns a function that, when executed, will remove the timer
-        self._updater = async_track_time_interval(
-            self._hass, self.async_update, timedelta(minutes=5)
-        )
-
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
         if temperature is None:
             return
 
-        self._room["targetTemperature"] = temperature
-        await self._room.async_update()
+        # fetch the room again so we don't overwrite changes made since the last update
+        room = await self._tune.async_room(self._room.uuid(), invalidate_cache=True)
+        room["targetTemperature"] = temperature
+        await room.async_update()
+        self._room = room
         self._target_temperature = temperature
 
-    async def async_update(self, event_time=None):
+    async def async_update(self):
         """Fetch new state data from the sensor.
 
         This is the only method that should fetch new data for Home Assistant.
         """
         try:
-            current = await self._node.async_measurement(MeasurementType.TEMPERATURE)
-            target_room = await self._tune.async_room(self._room.uuid())
+            # fetch the tune on each update since the control room can be changed in the Ngenic app
+            tune = await self._ngenic.async_tune(self._tune.uuid(), invalidate_cache=True)
+            control_room_uuid = _get_control_room_uuid(tune)
+            if not control_room_uuid:
+                _LOGGER.warning("No control room found for '%s'", self.unique_id)
+                self._available = False
+                return
+            target_room = await tune.async_room(control_room_uuid)
+            node = await tune.async_node(target_room["nodeUuid"])
+            current = await node.async_measurement(MeasurementType.TEMPERATURE)
+            self._tune = tune
+            self._room = target_room
             self._available = True
         except Exception:
             # Don't throw an exception if a sensor fails to update.
