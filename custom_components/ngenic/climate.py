@@ -20,6 +20,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import BRAND, DATA_CLIENT, DOMAIN
+from .sensors import get_measurement_value
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -208,7 +209,9 @@ class NgenicTune(ClimateEntity):
                 return
             target_room = await tune.async_room(control_room_uuid)
             node = await tune.async_node(target_room["nodeUuid"])
-            current = await node.async_measurement(MeasurementType.TEMPERATURE)
+            current = await get_measurement_value(
+                node, measurement_type=MeasurementType.TEMPERATURE
+            )
             self._tune = tune
             self._room = target_room
             self._available = True
@@ -220,7 +223,7 @@ class NgenicTune(ClimateEntity):
             return
 
         try:
-            self._current_temperature = round(current["value"], 1)
+            self._current_temperature = round(current, 1)
             self._target_temperature = round(target_room["targetTemperature"], 1)
         except (AttributeError, KeyError, TypeError):
             # A successful call can still come back without the field we
