@@ -11,7 +11,7 @@ from ngenicpy.models.room import Room
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
 
 from . import get_measurement_value
@@ -114,6 +114,7 @@ class SlimNgenicSensor(SensorEntity):
             "Fetch measurement (sensor=%s)",
             self.unique_id,
         )
+        was_available = self._available
         try:
             new_state = await self._async_fetch_measurement(first_load)
             self._available = True
@@ -122,9 +123,11 @@ class SlimNgenicSensor(SensorEntity):
             # Instead, make the sensor unavailable.
             _LOGGER.exception("Failed to update (sensor=%s)", self.unique_id)
             self._available = False
+            if was_available and self.hass:
+                self.schedule_update_ha_state()
             return
 
-        if self._state != new_state:
+        if self._state != new_state or not was_available:
             self._state = new_state
             _LOGGER.debug(
                 "New measurement: %s (sensor=%s)",
@@ -206,4 +209,4 @@ class NgenicSensor(SlimNgenicSensor):
         current = await get_measurement_value(
             self._node, measurement_type=self._measurement_type
         )
-        return round(current, 1)
+        return round(current, 1) if current is not None else None

@@ -10,7 +10,7 @@ from ngenicpy.models.room import Room
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import UnitOfPower
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 
 from . import get_measurement_value
 from .base import NgenicSensor
@@ -64,4 +64,4 @@ class NgenicPowerSensor(NgenicSensor):
         current = await get_measurement_value(
             self._node, measurement_type=self._measurement_type, invalidate_cache=True
         )
-        return round(current * 1000.0, 1)
+        return round(current * 1000.0, 1) if current is not None else None

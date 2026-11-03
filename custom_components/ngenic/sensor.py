@@ -8,8 +8,11 @@ from ngenicpy.models.measurement import MeasurementType
 from ngenicpy.models.node import NodeType
 from ngenicpy.models.room import Room
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
 
@@ -33,7 +36,9 @@ from .sensors.voltage import NgenicVoltageSensor
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, _, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ):
     """Set up the sensor platform."""
 
@@ -132,7 +137,11 @@ async def async_setup_entry(
                     )
                 )
 
-            if MeasurementType.CONTROL_VALUE in measurement_types:
+            if node.get_type() != NodeType.CONTROLLER:
+                _async_remove_control_value_sensor(hass, config_entry, node.uuid())
+            elif MeasurementType.CONTROL_VALUE in measurement_types:
+                # only the controller has data for the control value, even though
+                # other nodes (like the gateway) may list it as a measurement type
                 # append "control" so it doesn't collide with control temperature
                 # this will become "Ngenic controller control temperature"
                 node_name = f"{node_name} control"
@@ -346,11 +355,42 @@ async def async_setup_entry(
         else:
             # Otherwise wait 1 minute before updating the device state
             # This is to ensure the Ngenic API not responds with "429 Too Many Requests" error
-            async_call_later(
-                hass,
-                timedelta(minutes=1),
-                device.async_update,
+            config_entry.async_on_unload(
+                async_call_later(
+                    hass,
+                    timedelta(minutes=1),
+                    device.async_update,
+                )
             )
 
         # Setup update timer
         device.setup_updater()
+
+
+@callback
+def _async_remove_control_value_sensor(
+    hass: HomeAssistant, config_entry: ConfigEntry, node_uuid: str
+) -> None:
+    """Remove control value sensors created for nodes other than the controller.
+
+    Older versions created it for every node listing the measurement type, but only the
+    controller has data for it. The device is removed as well if it has no entities left.
+    """
+    ent_reg = er.async_get(hass)
+    entity_id = ent_reg.async_get_entity_id(
+        SENSOR_DOMAIN,
+        DOMAIN,
+        f"{node_uuid}-{MeasurementType.CONTROL_VALUE.name}-sensor",
+    )
+    if entity_id is None:
+        return
+
+    device_id = ent_reg.async_get(entity_id).device_id
+    ent_reg.async_remove(entity_id)
+
+    if device_id and not er.async_entries_for_device(
+        ent_reg, device_id, include_disabled_entities=True
+    ):
+        dr.async_get(hass).async_update_device(
+            device_id, remove_config_entry_id=config_entry.entry_id
+        )
