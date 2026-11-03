@@ -1,6 +1,7 @@
 """Switch for Ngenic integration."""
 
 from collections.abc import Callable
+from datetime import timedelta
 import logging
 
 from ngenicpy import AsyncNgenic
@@ -26,6 +27,8 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__package__)
+
+SCAN_INTERVAL = timedelta(minutes=5)
 
 
 async def async_setup_entry(
@@ -56,7 +59,6 @@ class NgenicAwayModeSwitch(SwitchEntity):
         self._attr_unique_id = slugify(f"{tune.uuid()} {self._attr_name}")
         self._attr_icon = "mdi:home-off"
         self._attr_is_on = False
-        self._attr_should_poll = False
         self._attr_device_class = SwitchDeviceClass.SWITCH
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"tune_{tune['tuneUuid']}")},
@@ -70,6 +72,10 @@ class NgenicAwayModeSwitch(SwitchEntity):
 
     async def _toggle_away(self, active: bool) -> None:
         """Toggle away mode."""
+        if self._schedule is None:
+            self._schedule = await self._tune.async_setpoint_schedule(
+                SETPONT_SCHEDULE_NAME, True
+            )
         if active:
             self._schedule.activate_away()
         else:
