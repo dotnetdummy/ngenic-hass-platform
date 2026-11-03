@@ -106,7 +106,10 @@ def _async_migrate_unique_id(hass: HomeAssistant, tune_uuid: str, unique_id: str
         ent_reg.async_remove(entry.entity_id)
 
     _LOGGER.info(
-        "Migrating %s unique id from %s to %s", keep.entity_id, keep.unique_id, unique_id
+        "Migrating %s unique id from %s to %s",
+        keep.entity_id,
+        keep.unique_id,
+        unique_id,
     )
     ent_reg.async_update_entity(keep.entity_id, new_unique_id=unique_id)
 
@@ -195,7 +198,9 @@ class NgenicTune(ClimateEntity):
         """
         try:
             # fetch the tune on each update since the control room can be changed in the Ngenic app
-            tune = await self._ngenic.async_tune(self._tune.uuid(), invalidate_cache=True)
+            tune = await self._ngenic.async_tune(
+                self._tune.uuid(), invalidate_cache=True
+            )
             control_room_uuid = _get_control_room_uuid(tune)
             if not control_room_uuid:
                 _LOGGER.warning("No control room found for '%s'", self.unique_id)
