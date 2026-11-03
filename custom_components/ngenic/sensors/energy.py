@@ -1,6 +1,6 @@
 """Ngenic Energy Sensor."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from ngenicpy import AsyncNgenic
 from ngenicpy.models.measurement import MeasurementType
@@ -10,7 +10,8 @@ from ngenicpy.models.room import Room
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
+import homeassistant.util.dt as dt_util
 
 from . import TIME_ZONE, get_measurement_value
 from .base import NgenicSensor
@@ -29,7 +30,9 @@ def _get_from_to_datetime(days=1):
     When asking for measurements, the `from` datetime is inclusive
     and the `to` datetime is exclusive.
     """
-    from_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    from_dt = dt_util.now().replace(
+        tzinfo=None, hour=0, minute=0, second=0, microsecond=0
+    )
     to_dt = from_dt + timedelta(days=days)
 
     return (from_dt.isoformat() + " " + TIME_ZONE, to_dt.isoformat() + " " + TIME_ZONE)
@@ -89,4 +92,4 @@ class NgenicEnergySensor(NgenicSensor):
             from_dt=from_dt,
             to_dt=to_dt,
         )
-        return round(current, 1)
+        return round(current, 1) if current is not None else None

@@ -2,6 +2,7 @@
 
 import logging
 
+from ngenicpy.models.measurement import Measurement
 from ngenicpy.models.node import Node
 
 import homeassistant.util.dt as dt_util
@@ -13,7 +14,7 @@ TIME_ZONE = (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def get_measurement_value(node: Node, **kwargs) -> int:
+async def get_measurement_value(node: Node, **kwargs) -> float | None:
     """Get measurement.
 
     This is a wrapper around the measurement API to gather
@@ -31,12 +32,31 @@ async def get_measurement_value(node: Node, **kwargs) -> int:
             kwargs.get("to_dt", "None"),
             kwargs.get("invalidate_cache", "False"),
         )
-        measurement_val = 0
-    elif isinstance(measurement, list):
+        measurement_val = None
+    else:
         # using datetime will return a list of measurements
         # we'll use the last item in that list
-        measurement_val = measurement[-1]["value"]
-    else:
-        measurement_val = measurement["value"]
+        if isinstance(measurement, list):
+            measurement = measurement[-1]
+
+        if not _has_value(measurement):
+            _LOGGER.info(
+                "Measurement has no value for period (type=%s, from=%s, to=%s)",
+                kwargs.get("measurement_type", "unknown"),
+                kwargs.get("from_dt", "None"),
+                kwargs.get("to_dt", "None"),
+            )
+            measurement_val = None
+        else:
+            measurement_val = measurement["value"]
 
     return measurement_val
+
+
+def _has_value(measurement: Measurement) -> bool:
+    """Return if a value is present in the measurement period."""
+    try:
+        return measurement["hasValue"] is not False
+    except AttributeError:
+        # older responses may not include hasValue, assume the value is present
+        return True

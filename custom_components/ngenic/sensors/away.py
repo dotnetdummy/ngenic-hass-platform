@@ -6,10 +6,11 @@ import logging
 from ngenicpy import AsyncNgenic
 from ngenicpy.models.tune import Tune
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo, slugify
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.util import slugify
 
 from ..const import (  # noqa: TID252
     BRAND,
@@ -56,6 +57,7 @@ class NgenicBaseAwaySensor(SlimNgenicSensor):
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks."""
+        await super().async_added_to_hass()
         _LOGGER.debug("Registering callbacks for %s", self.unique_id)
         self.async_on_remove(
             async_dispatcher_connect(
@@ -68,7 +70,7 @@ class NgenicAwayModeSensor(NgenicBaseAwaySensor):
     """Representation of a Ngenic Away Mode Sensor."""
 
     device_class = SensorDeviceClass.ENUM
-    state_class = SensorStateClass.MEASUREMENT
+    _attr_options = ["Active", "Inactive"]
     _attr_icon = "mdi:home-off"
 
     def __init__(
@@ -95,7 +97,6 @@ class NgenicAwayScheduledFromSensor(NgenicBaseAwaySensor):
     """Representation of a Ngenic AwayScheduled From Sensor."""
 
     device_class = SensorDeviceClass.TIMESTAMP
-    state_class = SensorStateClass.MEASUREMENT
 
     def __init__(
         self,
@@ -125,7 +126,6 @@ class NgenicAwayScheduledToSensor(NgenicBaseAwaySensor):
     """Representation of a Ngenic Away Scheduled To Sensor."""
 
     device_class = SensorDeviceClass.TIMESTAMP
-    state_class = SensorStateClass.MEASUREMENT
 
     def __init__(
         self,

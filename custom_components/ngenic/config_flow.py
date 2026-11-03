@@ -30,7 +30,6 @@ class FlowHandler(config_entries.ConfigFlow):
     """Handle a config flow for Ngenic integration."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_PUSH
 
     def _show_form(self, error: str | None = None):
         return self.async_show_form(
