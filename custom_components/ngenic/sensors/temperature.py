@@ -49,10 +49,3 @@ class NgenicTemperatureSensor(NgenicSensor):
     def unit_of_measurement(self):
         """Return the unit of measurement."""
         return UnitOfTemperature.CELSIUS
-
-    async def _async_fetch_measurement(self, first_load: bool = False):
-        value = await super()._async_fetch_measurement(first_load)
-        if value is None and self._measurement_type == MeasurementType.CONTROL_VALUE:
-            # the gateway doesn't always report a control value, show 0 as before
-            return 0
-        return value
