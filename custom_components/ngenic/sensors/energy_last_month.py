@@ -1,6 +1,6 @@
 """Ngenic Energy Sensor (last month)."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from ngenicpy import AsyncNgenic
 from ngenicpy.models.measurement import MeasurementType
@@ -11,6 +11,7 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
+import homeassistant.util.dt as dt_util
 
 from . import TIME_ZONE, get_measurement_value
 from .base import NgenicSensor
@@ -29,7 +30,9 @@ def _get_from_to_datetime_last_month() -> tuple[str, str]:
     When asking for measurements, the `from` datetime is inclusive
     and the `to` datetime is exclusive.
     """
-    to_dt = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    to_dt = dt_util.now().replace(
+        tzinfo=None, day=1, hour=0, minute=0, second=0, microsecond=0
+    )
     from_dt = (to_dt + timedelta(days=-1)).replace(day=1)
     return (from_dt.isoformat() + " " + TIME_ZONE, to_dt.isoformat() + " " + TIME_ZONE)
 
