@@ -89,4 +89,4 @@ class NgenicEnergyLastMonthSensor(NgenicSensor):
             from_dt=from_dt,
             to_dt=to_dt,
         )
-        return round(current, 1)
+        return round(current, 1) if current is not None else None

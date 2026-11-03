@@ -61,4 +61,4 @@ class NgenicCurrentSensor(NgenicSensor):
         val = await get_measurement_value(
             self._node, measurement_type=self._measurement_type, invalidate_cache=True
         )
-        return round(val, 1)
+        return round(val, 1) if val is not None else None

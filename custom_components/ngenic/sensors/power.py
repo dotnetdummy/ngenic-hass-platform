@@ -64,4 +64,4 @@ class NgenicPowerSensor(NgenicSensor):
         current = await get_measurement_value(
             self._node, measurement_type=self._measurement_type, invalidate_cache=True
         )
-        return round(current * 1000.0, 1)
+        return round(current * 1000.0, 1) if current is not None else None

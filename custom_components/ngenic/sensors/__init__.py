@@ -13,7 +13,7 @@ TIME_ZONE = (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def get_measurement_value(node: Node, **kwargs) -> int:
+async def get_measurement_value(node: Node, **kwargs) -> float | None:
     """Get measurement.
 
     This is a wrapper around the measurement API to gather
@@ -31,7 +31,7 @@ async def get_measurement_value(node: Node, **kwargs) -> int:
             kwargs.get("to_dt", "None"),
             kwargs.get("invalidate_cache", "False"),
         )
-        measurement_val = 0
+        measurement_val = None
     elif isinstance(measurement, list):
         # using datetime will return a list of measurements
         # we'll use the last item in that list

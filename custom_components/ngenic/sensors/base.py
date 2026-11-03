@@ -209,4 +209,4 @@ class NgenicSensor(SlimNgenicSensor):
         current = await get_measurement_value(
             self._node, measurement_type=self._measurement_type
         )
-        return round(current, 1)
+        return round(current, 1) if current is not None else None
