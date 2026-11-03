@@ -57,6 +57,7 @@ class NgenicBaseAwaySensor(SlimNgenicSensor):
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks."""
+        await super().async_added_to_hass()
         _LOGGER.debug("Registering callbacks for %s", self.unique_id)
         self.async_on_remove(
             async_dispatcher_connect(

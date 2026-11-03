@@ -10,16 +10,18 @@ from ngenicpy.models.node import Node
 from ngenicpy.models.room import Room
 
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import get_measurement_value
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class SlimNgenicSensor(SensorEntity):
+class SlimNgenicSensor(SensorEntity, RestoreEntity):
     """Representation of a Slim Ngenic Sensor."""
 
     def __init__(
@@ -73,6 +75,21 @@ class SlimNgenicSensor(SensorEntity):
     def should_update_on_startup(self) -> bool:
         """Return if the sensor should update on startup or not."""
         return self._should_update_on_startup
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last known state until the first update has been made."""
+        await super().async_added_to_hass()
+        if self._state is not None:
+            return
+        last_state = await self.async_get_last_state()
+        if last_state is None or last_state.state in (
+            STATE_UNAVAILABLE,
+            STATE_UNKNOWN,
+        ):
+            return
+        _LOGGER.debug("Restored state %s (sensor=%s)", last_state.state, self.unique_id)
+        self._state = last_state.state
+        self._available = True
 
     async def _force_update(self) -> None:
         """Force update of data."""
