@@ -8,6 +8,7 @@ from ngenicpy.models.measurement import MeasurementType
 from ngenicpy.models.node import NodeType
 from ngenicpy.models.room import Room
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -33,7 +34,9 @@ from .sensors.voltage import NgenicVoltageSensor
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, _, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ):
     """Set up the sensor platform."""
 
@@ -346,10 +349,12 @@ async def async_setup_entry(
         else:
             # Otherwise wait 1 minute before updating the device state
             # This is to ensure the Ngenic API not responds with "429 Too Many Requests" error
-            async_call_later(
-                hass,
-                timedelta(minutes=1),
-                device.async_update,
+            config_entry.async_on_unload(
+                async_call_later(
+                    hass,
+                    timedelta(minutes=1),
+                    device.async_update,
+                )
             )
 
         # Setup update timer

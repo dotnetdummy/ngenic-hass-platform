@@ -9,7 +9,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
 from .config_flow import configured_instances
-from .const import DATA_CLIENT, DATA_CONFIG, DOMAIN, SERVICE_SET_ACTIVE_CONTROL
+from .const import (
+    DATA_CLIENT,
+    DATA_CONFIG,
+    DOMAIN,
+    SERVICE_ACTIVATE_AWAY,
+    SERVICE_DEACTIVATE_AWAY,
+    SERVICE_SET_ACTIVE_CONTROL,
+    SERVICE_SET_AWAY_SCHEDULE,
+)
 from .services import async_register_services
 
 CONFIG_SCHEMA = vol.Schema(
@@ -71,10 +79,21 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """Unload of the Ngenic component."""
 
-    await hass.config_entries.async_unload_platforms(config_entry, NGENIC_PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        config_entry, NGENIC_PLATFORMS
+    )
+    if not unload_ok:
+        return False
+
     await hass.data[DOMAIN][DATA_CLIENT].async_close()
 
     # Remove Ngenic services
-    hass.services.async_remove(DOMAIN, SERVICE_SET_ACTIVE_CONTROL)
+    for service in (
+        SERVICE_SET_ACTIVE_CONTROL,
+        SERVICE_SET_AWAY_SCHEDULE,
+        SERVICE_ACTIVATE_AWAY,
+        SERVICE_DEACTIVATE_AWAY,
+    ):
+        hass.services.async_remove(DOMAIN, service)
 
     return True
