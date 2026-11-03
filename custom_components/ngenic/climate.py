@@ -8,13 +8,15 @@ from ngenicpy.models.measurement import MeasurementType
 from ngenicpy.models.tune import Tune
 
 from homeassistant.components.climate import (
+    DOMAIN as CLIMATE_DOMAIN,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 
@@ -36,35 +38,78 @@ async def async_setup_entry(
         # listing tunes contain less information than when querying a single tune
         tune = await ngenic.async_tune(tmp_tune.uuid())
 
-        # rooms with control sensors can be found either directly on the tune, or by looking at the activeControl
-        # property on the room object. if roomToControlUuid is set, it takes precedence and the activeControl
-        # attribute will not be used
-        control_room_uuids = []
-        if tune["roomToControlUuid"]:
-            control_room_uuids.append(tune["roomToControlUuid"])
-        else:
-            for room in tune["rooms"]:
-                if room["activeControl"] is True:
-                    control_room_uuids.extend(room["uuid"])
+        # the room whose sensor data and target temperature should be used as inputs to the Tune control system
+        # can be found either directly on the tune, or by looking at the activeControl property on the room
+        # object. if roomToControlUuid is set, it takes precedence and the activeControl attribute will not be used
+        control_room_uuid = tune["roomToControlUuid"]
+        if not control_room_uuid:
+            control_room_uuid = next(
+                (room["uuid"] for room in tune["rooms"] if room["activeControl"] is True),
+                None,
+            )
+        if not control_room_uuid:
+            _LOGGER.warning("No control room found for Tune '%s'", tune["name"])
+            continue
 
-        for control_room_uuid in control_room_uuids:
-            # get the room whose sensor data and target temperature should be used as inputs to the Tune control system
-            control_room = await tune.async_room(control_room_uuid)
+        control_room = await tune.async_room(control_room_uuid)
 
-            # get the room node
-            control_node = await tune.async_node(control_room["nodeUuid"])
+        # get the room node
+        control_node = await tune.async_node(control_room["nodeUuid"])
 
-            device = NgenicTune(hass, ngenic, tune, control_room, control_node)
+        device = NgenicTune(hass, ngenic, tune, control_room, control_node)
 
-            # Initial update
-            await device.async_update()
+        _async_migrate_unique_id(hass, tune.uuid(), device.unique_id)
 
-            # Setup update timer
-            device.setup_updater()
+        # Initial update
+        await device.async_update()
 
-            devices.append(device)
+        # Setup update timer
+        device.setup_updater()
+
+        devices.append(device)
 
     async_add_entities(devices)
+
+
+@callback
+def _async_migrate_unique_id(hass: HomeAssistant, tune_uuid: str, unique_id: str):
+    """Move climate entities of a Tune to a unique id that doesn't depend on the control room.
+
+    Older versions used the control room node uuid, which changes whenever the control room
+    or its sensor changes, and Home Assistant would then create a new entity with a new entity id.
+    The oldest climate entity on the Tune device is kept so the original entity id is restored,
+    and duplicates created by earlier unique id changes are removed.
+    """
+    ent_reg = er.async_get(hass)
+    if ent_reg.async_get_entity_id(CLIMATE_DOMAIN, DOMAIN, unique_id):
+        return
+
+    device = dr.async_get(hass).async_get_device(
+        identifiers={(DOMAIN, f"tune_{tune_uuid}")}
+    )
+    if device is None:
+        return
+
+    entries = [
+        entry
+        for entry in er.async_entries_for_device(
+            ent_reg, device.id, include_disabled_entities=True
+        )
+        if entry.domain == CLIMATE_DOMAIN and entry.platform == DOMAIN
+    ]
+    if not entries:
+        return
+
+    entries.sort(key=lambda entry: entry.created_at)
+    keep, *duplicates = entries
+    for entry in duplicates:
+        _LOGGER.info("Removing duplicate climate entity %s", entry.entity_id)
+        ent_reg.async_remove(entry.entity_id)
+
+    _LOGGER.info(
+        "Migrating %s unique id from %s to %s", keep.entity_id, keep.unique_id, unique_id
+    )
+    ent_reg.async_update_entity(keep.entity_id, new_unique_id=unique_id)
 
 
 class NgenicTune(ClimateEntity):
@@ -114,20 +159,20 @@ class NgenicTune(ClimateEntity):
     @property
     def unique_id(self):
         """Return a unique ID for this Tune."""
-        return f"{self._node.uuid()}-climate"
+        return f"{self._tune.uuid()}-climate"
 
     @property
-    def temperature_unit(self):
+    def native_temperature_unit(self):
         """Return the unit of measurement which this thermostat uses."""
         return UnitOfTemperature.CELSIUS
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return the current temperature."""
         return self._current_temperature
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return the temperature we try to reach."""
         return self._target_temperature
 

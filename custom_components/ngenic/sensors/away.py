@@ -9,7 +9,8 @@ from ngenicpy.models.tune import Tune
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo, slugify
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.util import slugify
 
 from ..const import (  # noqa: TID252
     BRAND,

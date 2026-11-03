@@ -1,5 +1,6 @@
 """Switch for Ngenic integration."""
 
+from collections.abc import Callable
 import logging
 
 from ngenicpy import AsyncNgenic
@@ -8,11 +9,12 @@ from ngenicpy.models.tune import Tune
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity import Callable, DeviceInfo, HomeAssistant
 from homeassistant.util import slugify
 
 from .const import (
