@@ -19,6 +19,10 @@ from . import get_measurement_value
 _LOGGER = logging.getLogger(__name__)
 
 
+class MeasurementMissingError(Exception):
+    """Raised when the API has no measurement for the requested period."""
+
+
 class SlimNgenicSensor(SensorEntity):
     """Representation of a Slim Ngenic Sensor."""
 
@@ -114,9 +118,21 @@ class SlimNgenicSensor(SensorEntity):
             "Fetch measurement (sensor=%s)",
             self.unique_id,
         )
+        was_available = self._available
         try:
             new_state = await self._async_fetch_measurement(first_load)
             self._available = True
+        except MeasurementMissingError:
+            # No data for the period (e.g. the sensor lost contact with the
+            # gateway): report the sensor as unavailable instead of a false value.
+            _LOGGER.debug(
+                "No measurement for the period, marking unavailable (sensor=%s)",
+                self.unique_id,
+            )
+            self._available = False
+            if was_available and self.hass:
+                self.schedule_update_ha_state()
+            return
         except Exception:
             # Don't throw an exception if a sensor fails to update.
             # Instead, make the sensor unavailable.
@@ -124,7 +140,7 @@ class SlimNgenicSensor(SensorEntity):
             self._available = False
             return
 
-        if self._state != new_state:
+        if self._state != new_state or not was_available:
             self._state = new_state
             _LOGGER.debug(
                 "New measurement: %s (sensor=%s)",
@@ -204,6 +220,8 @@ class NgenicSensor(SlimNgenicSensor):
         fetch or format the measurement differently.
         """
         current = await get_measurement_value(
-            self._node, measurement_type=self._measurement_type
+            self._node, missing_value=None, measurement_type=self._measurement_type
         )
+        if current is None:
+            raise MeasurementMissingError
         return round(current, 1)
